@@ -1,0 +1,10 @@
+{
+    "csv-stringify": "0.0.8",
+    "request": "2.60.0",
+    "cheerio": "0.19.0",
+    "mkdirp": "0.5.1",
+    "sanitize-html": "1.7.2",
+    "graceful-fs": "4.1.2",
+    "async": "1.4.0",
+    "moment": "2.10.6"
+}

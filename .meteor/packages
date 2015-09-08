@@ -7,3 +7,9 @@
 meteor-platform
 autopublish
 insecure
+meteorhacks:npm
+
+
+npm-container
+coffeescript
+mikowals:batch-insert

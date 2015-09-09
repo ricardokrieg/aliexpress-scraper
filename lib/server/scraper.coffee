@@ -130,6 +130,17 @@ class @Scraper
             # ui-breadcrumb
             product_data['category'].splice(0, 2)
 
+            $('span.multi-currency').filter ->
+                product_data['original_price'] =
+                    $(this).children('[itemprop=priceCurrency]').text().strip() +
+                    ' ' +
+                    $(this).children('#multi-currency-price').text().strip()
+            # multi-currency
+
+            $('#sku-price').filter ->
+                product_data['price'] = $(this).text().strip()
+            # sku-price
+
             query_params = {_id: product['_id']}
 
             Products.update(query_params, product_data, {upsert: false})

@@ -118,7 +118,8 @@ class @Scraper
                 category: [],
                 image_urls: [],
                 colors: [],
-                sizes: []
+                sizes: [],
+                attributes: []
             }
 
             $('h1.product-name[itemprop=name]').filter ->
@@ -136,15 +137,19 @@ class @Scraper
             # ui-breadcrumb
             product_data['category'].splice(0, 2)
 
-            $('span.multi-currency').filter ->
-                product_data['original_price'] =
-                    $(this).children('[itemprop=priceCurrency]').text().strip() +
-                    ' ' +
-                    $(this).children('#multi-currency-price').text().strip()
-            # multi-currency
+            # $('span.multi-currency').filter ->
+            #     product_data['original_price'] =
+            #         $(this).children('[itemprop=priceCurrency]').text().strip() +
+            #         ' ' +
+            #         $(this).children('#multi-currency-price').text().strip()
+            # # multi-currency
 
             $('#sku-price').filter ->
                 product_data['price'] = $(this).text().strip()
+
+                if product_data['price'].indexOf('-') > -1
+                    product_data['price'] = product_data['price'].split(' - ')[1]
+                # if
             # sku-price
 
             $('ul.image-nav li.image-nav-item span img').filter ->
@@ -163,13 +168,28 @@ class @Scraper
             # var skuProducts=[{"skuAttr":"14:173#blue;5:100014064","skuPropIds":"173,100014064","skuVal":{"actSkuCalPrice":"8.50","actSkuMultiCurrencyCalPrice":"33.43","actSkuMultiCurrencyDisplayPrice":"33,43","actSkuMultiCurrencyPrice":"R$ 33,43","actSkuPrice":"8.50","availQuantity":19,"inventory":20,"isActivity":true,"skuCalPrice":"10.63","skuMultiCurrencyCalPrice":"41.81","skuMultiCurrencyDisplayPrice":"41,81","skuMultiCurrencyPrice":"R$ 41,81","skuPrice":"10.63"}}
             $('#product-info-sku').filter ->
                 $(this).children('dl.product-info-color').find('li a').filter ->
-                    product_data['colors'].push($(this).attr('title'))
+                    color_data = {
+                        title: $(this).attr('title'),
+                        thumb_url: $(this).children().first().attr('src')
+                    }
+                    product_data['colors'].push(color_data)
                 # product-info-color
 
                 $(this).children('dl.product-info-size').find('li a').filter ->
                     product_data['sizes'].push($(this).text())
                 # product-info-size
             # product-info-sku
+
+            $('.product-params').filter ->
+                $(this).find('dl').filter ->
+                    attribute_data = {
+                        name: $(this).find('dt').text().replace(/\:/g, ''),
+                        value: $(this).find('dd').text()
+                    }
+
+                    product_data['attributes'].push(attribute_data)
+                # dl
+            # product-params
 
             query_params = {_id: product['_id']}
 

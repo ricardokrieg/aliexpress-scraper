@@ -32,6 +32,7 @@ class @Scraper
     @build_options: (url) ->
         options = {
             url: url,
+            timeout: 120000,
             headers: {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Cache-Control': 'max-age=0',
@@ -101,7 +102,11 @@ class @Scraper
 
     @scrape_product: (product, callback) ->
         request Scraper.build_options(product['url']), Meteor.bindEnvironment (error, response, html) ->
-            throw error if error
+            if error
+                console.log "#{product['aliexpress_id']} [Error]"
+                callback(error, null)
+                return
+            # if
 
             $ = cheerio.load(html)
 
@@ -111,7 +116,9 @@ class @Scraper
                 url: product['url'],
                 scraped: true,
                 category: [],
-                image_urls: []
+                image_urls: [],
+                colors: [],
+                sizes: []
             }
 
             $('h1.product-name[itemprop=name]').filter ->
@@ -152,6 +159,18 @@ class @Scraper
                 # thumb
             # if
 
+            # Should check if item is available
+            # var skuProducts=[{"skuAttr":"14:173#blue;5:100014064","skuPropIds":"173,100014064","skuVal":{"actSkuCalPrice":"8.50","actSkuMultiCurrencyCalPrice":"33.43","actSkuMultiCurrencyDisplayPrice":"33,43","actSkuMultiCurrencyPrice":"R$ 33,43","actSkuPrice":"8.50","availQuantity":19,"inventory":20,"isActivity":true,"skuCalPrice":"10.63","skuMultiCurrencyCalPrice":"41.81","skuMultiCurrencyDisplayPrice":"41,81","skuMultiCurrencyPrice":"R$ 41,81","skuPrice":"10.63"}}
+            $('#product-info-sku').filter ->
+                $(this).children('dl.product-info-color').find('li a').filter ->
+                    product_data['colors'].push($(this).attr('title'))
+                # product-info-color
+
+                $(this).children('dl.product-info-size').find('li a').filter ->
+                    product_data['sizes'].push($(this).text())
+                # product-info-size
+            # product-info-sku
+
             query_params = {_id: product['_id']}
 
             description_url_regex = /window\.runParams\.descUrl\=\"(.*?)\"\;/i
@@ -173,13 +192,13 @@ class @Scraper
                     Products.update(query_params, product_data, {upsert: false})
                     product = Products.findOne(query_params)
 
-                    callback(product)
+                    callback(null, product)
                 # request
             else
                 Products.update(query_params, product_data, {upsert: false})
                 product = Products.findOne(query_params)
 
-                callback(product)
+                callback(null, product)
             # if
         # request
     # scrape_product

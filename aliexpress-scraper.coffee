@@ -18,10 +18,10 @@ if Meteor.isServer
             console.log "Going to scrape #{products.length} products"
 
             async.each products, Meteor.bindEnvironment((product, async_products_callback) ->
-                console.log "#{product['aliexpress_id']} [Started]"
-
-                Scraper.scrape_product product, (product) ->
-                    console.log "#{product['title']} [Done]"
+                Scraper.scrape_product product, (error, product) ->
+                    if not error
+                        console.log "#{product['title']} [Done]"
+                    # if
                     async_products_callback()
                 # scrape_product
             ), (error) ->

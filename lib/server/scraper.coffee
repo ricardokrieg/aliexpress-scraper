@@ -79,14 +79,19 @@ class @Scraper
                 products.push(product_data)
             # list-item
 
-            product_ids = Products.batchInsert(products)
+            duplicate_product_ids = (p['aliexpress_id'] for p in Products.find().fetch())
+
+            products = products.filter (product) -> product['aliexpress_id'] not in duplicate_product_ids
+
+            Products.batchInsert(products) if products.length > 0
+            console.log "Added #{products.length} products"
 
             last_page = false
             $('span.page-end.ui-pagination-next.ui-pagination-disabled').filter ->
                 last_page = true
             # page-end
 
-            if last_page or page_number >= 10
+            if last_page or page_number >= 2
                 callback(page_number)
             else
                 $('a.page-next.ui-pagination-next').filter ->
@@ -106,12 +111,24 @@ class @Scraper
                 aliexpress_id: product['aliexpress_id'],
                 category_id: product['category_id'],
                 url: product['url'],
-                scraped: true
+                scraped: true,
+                category: []
             }
 
             $('h1.product-name[itemprop=name]').filter ->
                 product_data['title'] = $(this).text()
             # product-name
+
+            $('a.store-lnk').filter ->
+                product_data['seller_name'] = $(this).attr('title') unless 'seller_name' of product_data
+            # store-lnk
+
+            $('.ui-breadcrumb').filter ->
+                $(this).children('a').filter ->
+                    product_data['category'].push($(this).text())
+                # category tag
+            # ui-breadcrumb
+            product_data['category'].splice(0, 2)
 
             query_params = {_id: product['_id']}
 

@@ -1,3 +1,5 @@
+# export MONGO_URL=mongodb://stark:passtrash123@ds063892.mongolab.com:63892/general
+
 util = Meteor.npmRequire('util')
 async = Meteor.npmRequire('async')
 
@@ -11,7 +13,7 @@ if Meteor.isServer
         Scraper.scrape_category category_url, (category) ->
             # console.log util.inspect(category, false, null)
 
-            products = Products.find({category_id: category._id}).fetch()
+            products = Products.find({category_id: category._id, scraped: false}).fetch()
 
             console.log "Going to scrape #{products.length} products"
 

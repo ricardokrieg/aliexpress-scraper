@@ -7,7 +7,7 @@ if Meteor.isServer
     Meteor.startup ->
         console.log "START"
 
-        product_url = 'http://www.aliexpress.com/item/Free-Shipping-Women-Bodycon-Sexy-Vogue-Casual-Fit-Splicing-Backless-V-Neck-Two-Piece-Beach-Bath/32332332387.html'
+        # product_url = 'http://www.aliexpress.com/item/Free-Shipping-Women-Bodycon-Sexy-Vogue-Casual-Fit-Splicing-Backless-V-Neck-Two-Piece-Beach-Bath/32332332387.html'
         category_url = 'http://www.aliexpress.com/category/200000784/swimwear.html'
 
         Scraper.scrape_category category_url, (category) ->
@@ -18,6 +18,8 @@ if Meteor.isServer
             console.log "Going to scrape #{products.length} products"
 
             async.each products, Meteor.bindEnvironment((product, async_products_callback) ->
+                console.log "#{product['aliexpress_id']} [Started]"
+
                 Scraper.scrape_product product, (product) ->
                     console.log "#{product['title']} [Done]"
                     async_products_callback()

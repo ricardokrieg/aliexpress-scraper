@@ -60,8 +60,6 @@ class @Scraper
         # request = Meteor.npmRequire('request').defaults({'proxy': Scraper.proxy()})
 
         request Scraper.build_options(category_page_url), Meteor.bindEnvironment (error, response, html) ->
-            throw error if error
-
             $ = cheerio.load(html)
 
             products = []
@@ -112,7 +110,8 @@ class @Scraper
                 category_id: product['category_id'],
                 url: product['url'],
                 scraped: true,
-                category: []
+                category: [],
+                image_urls: []
             }
 
             $('h1.product-name[itemprop=name]').filter ->
@@ -141,12 +140,47 @@ class @Scraper
                 product_data['price'] = $(this).text().strip()
             # sku-price
 
+            $('ul.image-nav li.image-nav-item span img').filter ->
+                image_url = $(this).attr('src').replace /_50x50\..*/, ''
+                product_data['image_urls'].push(image_url)
+            # image-nav
+
+            if product_data['image_urls'].length == 0
+                $('img[data-role=thumb]').filter ->
+                    image_url = $(this).attr('src').replace /_350x350\..*/, ''
+                    product_data['image_urls'].push(image_url)
+                # thumb
+            # if
+
             query_params = {_id: product['_id']}
 
-            Products.update(query_params, product_data, {upsert: false})
-            product = Products.findOne(query_params)
+            description_url_regex = /window\.runParams\.descUrl\=\"(.*?)\"\;/i
+            description_url_matches = description_url_regex.exec(html)
 
-            callback(product)
+            if description_url_matches and description_url_matches.length == 2
+                description_url = description_url_matches[1]
+
+                request Scraper.build_options(description_url), Meteor.bindEnvironment (error, response, html) ->
+                    throw error if error
+
+                    description_regex = /.*window\.productDescription\=\'(.*)\'.*/i
+                    description_matches = description_regex.exec(html)
+
+                    if description_matches and description_matches.length == 2
+                        product_data['description'] = description_matches[1]
+                    # if
+
+                    Products.update(query_params, product_data, {upsert: false})
+                    product = Products.findOne(query_params)
+
+                    callback(product)
+                # request
+            else
+                Products.update(query_params, product_data, {upsert: false})
+                product = Products.findOne(query_params)
+
+                callback(product)
+            # if
         # request
     # scrape_product
 # Scraping

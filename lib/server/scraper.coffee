@@ -3,6 +3,8 @@ cheerio = Meteor.npmRequire('cheerio')
 util = Meteor.npmRequire('util')
 async = Meteor.npmRequire('async')
 moment = Meteor.npmRequire('moment')
+fs = Meteor.npmRequire('graceful-fs')
+mkdirp = Meteor.npmRequire('mkdirp')
 
 class @Scraper
     @proxy: ->
@@ -90,7 +92,7 @@ class @Scraper
                 last_page = true
             # page-end
 
-            if last_page or page_number >= 5
+            if last_page or page_number >= 1
                 callback(page_number)
             else
                 $('a.page-next.ui-pagination-next').filter ->
@@ -100,7 +102,7 @@ class @Scraper
         # request
     # scrape_category_page
 
-    @scrape_product: (product, callback) ->
+    @scrape_product: (product, download_directory_name, callback) ->
         request Scraper.build_options(product['url']), Meteor.bindEnvironment (error, response, html) ->
             if error
                 console.log "#{product['aliexpress_id']} [Error]"
@@ -117,6 +119,7 @@ class @Scraper
                 scraped: true,
                 category: [],
                 image_urls: [],
+                images: [],
                 colors: [],
                 sizes: [],
                 attributes: []
@@ -213,17 +216,47 @@ class @Scraper
                         product_data['description'] = description_matches[1]
                     # if
 
+                    Scraper.download_product_images product_data, download_directory_name, Meteor.bindEnvironment (product_data) ->
+                        Products.update(query_params, product_data, {upsert: false})
+                        product = Products.findOne(query_params)
+
+                        callback(null, product)
+                    # download_product_images
+                # request
+            else
+                Scraper.download_product_images product_data, download_directory_name, (product_data) ->
                     Products.update(query_params, product_data, {upsert: false})
                     product = Products.findOne(query_params)
 
                     callback(null, product)
-                # request
-            else
-                Products.update(query_params, product_data, {upsert: false})
-                product = Products.findOne(query_params)
-
-                callback(null, product)
+                # download_product_images
             # if
         # request
     # scrape_product
+
+    @download_product_images: (product_data, directory_name, callback) ->
+        base_name = '/tmp/scraper/aliexpress'
+        product_directory = "#{base_name}/images/#{directory_name}/#{product_data['aliexpress_id']}"
+
+        mkdirp product_directory, (error) ->
+            throw error if error
+
+            i = 1
+            for image_url in product_data['image_urls']
+                filename = "/images/#{directory_name}/#{product_data['aliexpress_id']}/#{i}.jpg"
+
+                image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
+                image_request.on 'error', (error) ->
+                    console.log("Image download error: #{image_url}")
+                    console.log(error)
+                # error
+
+                product_data['images'].push('media/import' + filename)
+
+                i += 1
+            # for
+
+            callback(product_data)
+        # mkdirp
+    # download_product_images
 # Scraping

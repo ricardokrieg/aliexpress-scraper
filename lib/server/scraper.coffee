@@ -90,7 +90,7 @@ class @Scraper
                 last_page = true
             # page-end
 
-            if last_page or page_number >= 2
+            if last_page or page_number >= 5
                 callback(page_number)
             else
                 $('a.page-next.ui-pagination-next').filter ->
@@ -200,7 +200,11 @@ class @Scraper
                 description_url = description_url_matches[1]
 
                 request Scraper.build_options(description_url), Meteor.bindEnvironment (error, response, html) ->
-                    throw error if error
+                    if error
+                        console.log "#{product['aliexpress_id']} [Error][description]"
+                        callback(error, null)
+                        return
+                    # if
 
                     description_regex = /.*window\.productDescription\=\'(.*)\'.*/i
                     description_matches = description_regex.exec(html)

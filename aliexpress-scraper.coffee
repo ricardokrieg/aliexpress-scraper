@@ -17,7 +17,7 @@ if Meteor.isServer
 
             console.log "Going to scrape #{products.length} products"
 
-            async.each products, Meteor.bindEnvironment((product, async_products_callback) ->
+            async.eachLimit products, 50, Meteor.bindEnvironment((product, async_products_callback) ->
                 Scraper.scrape_product product, (error, product) ->
                     if not error
                         console.log "#{product['title']} [Done]"

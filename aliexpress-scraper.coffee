@@ -3,7 +3,9 @@
 util = Meteor.npmRequire('util')
 async = Meteor.npmRequire('async')
 
+Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000784/swimwear.html'
 Meteor.PRICE_MULTIPLIER = 0.3
+Meteor.PAGE_LIMIT = -1
 
 do_export = (category) ->
     console.log "Exporting"
@@ -44,11 +46,9 @@ if Meteor.isServer
     Meteor.startup ->
         console.log "START"
 
-        category_url = 'http://www.aliexpress.com/category/200000784/swimwear.html'
+        do_scrape(Meteor.CATEGORY_URL)
 
-        do_scrape(category_url)
-
-        # category = Categories.findOne({url: category_url})
+        # category = Categories.findOne({url: Meteor.CATEGORY_URL})
         # do_export(category)
     # startup
 # isServer

@@ -96,7 +96,7 @@ class @Scraper
                 last_page = true
             # page-end
 
-            if last_page# or page_number >= 2
+            if last_page or (Meteor.PAGE_LIMIT >= 0 and page_number >= Meteor.PAGE_LIMIT)
                 callback(page_number)
             else
                 $('a.page-next.ui-pagination-next').filter ->
@@ -297,12 +297,14 @@ class @Scraper
 
                 for color in product_data['colors']
                     if color['thumb_url']
-                        filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title']}.jpg"
+                        filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}.jpg"
 
                         image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
                         image_request.on 'error', (error) ->
                             console.log("Thumbnail download error: #{color['thumb_url']}")
                             console.log(error)
+
+                            color['image'] = color['title']
                         # error
 
                         color['image'] = 'media/import' + filename

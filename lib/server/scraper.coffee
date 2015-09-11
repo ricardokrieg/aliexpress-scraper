@@ -44,11 +44,15 @@ class @Scraper
     # build_options
 
     @scrape_category: (category_url, callback) ->
+        category_name = /^.*\/(.*)\.html.*$/i.exec(category_url)
+
         query_params = {url: category_url}
-        Categories.update(query_params, query_params, {upsert: true})
+        update_params = {url: category_url, name: category_name[1]}
+
+        Categories.update(query_params, update_params, {upsert: true})
         category = Categories.findOne(query_params)
 
-        console.log "Scraping category ##{category._id}"
+        console.log "Scraping category ##{category.name}"
 
         Scraper.scrape_category_page category_url, 1, category._id, (total_pages) ->
             console.log "Total of pages: #{total_pages}"
@@ -92,7 +96,7 @@ class @Scraper
                 last_page = true
             # page-end
 
-            if last_page or page_number >= 1
+            if last_page# or page_number >= 2
                 callback(page_number)
             else
                 $('a.page-next.ui-pagination-next').filter ->
@@ -102,7 +106,7 @@ class @Scraper
         # request
     # scrape_category_page
 
-    @scrape_product: (product, download_directory_name, callback) ->
+    @scrape_product: (product, callback) ->
         request Scraper.build_options(product['url']), Meteor.bindEnvironment (error, response, html) ->
             if error
                 console.log "#{product['aliexpress_id']} [Error]"
@@ -117,6 +121,8 @@ class @Scraper
                 category_id: product['category_id'],
                 url: product['url'],
                 scraped: true,
+                description: null,
+                short_description: 'N/A',
                 category: [],
                 image_urls: [],
                 images: [],
@@ -134,7 +140,7 @@ class @Scraper
             # store-lnk
 
             $('.ui-breadcrumb').filter ->
-                $(this).children('a').filter ->
+                $(this).find('a').filter ->
                     product_data['category'].push($(this).text())
                 # category tag
             # ui-breadcrumb
@@ -147,13 +153,25 @@ class @Scraper
             #         $(this).children('#multi-currency-price').text().strip()
             # # multi-currency
 
-            $('#sku-price').filter ->
-                product_data['price'] = $(this).text().strip()
+            price_regex = /.*window\.runParams\.maxPrice=\"(.*)\".*/i
+            price_matches = price_regex.exec(html)
+            if price_matches and price_matches.length == 2
+                product_data['price'] = price_matches[1].toCurrency()
+            else
+                console.log "#{product['aliexpress_id']} [Error][price]"
+                callback(new Error("Could not get price", null))
+                return
+            # if
 
-                if product_data['price'].indexOf('-') > -1
-                    product_data['price'] = product_data['price'].split(' - ')[1]
-                # if
-            # sku-price
+            # $('#sku-price').filter ->
+            #     product_data['price'] = $(this).text().strip()
+
+            #     if product_data['price'].indexOf('-') > -1
+            #         product_data['price'] = product_data['price'].split(' - ')[1]
+            #     # if
+
+            #     product_data['price'] = product_data['price'].toCurrency()
+            # # sku-price
 
             $('ul.image-nav li.image-nav-item span img').filter ->
                 image_url = $(this).attr('src').replace /_50x50\..*/, ''
@@ -167,7 +185,7 @@ class @Scraper
                 # thumb
             # if
 
-            # Should check if item is available
+            # TODO Should check if item is available
             # var skuProducts=[{"skuAttr":"14:173#blue;5:100014064","skuPropIds":"173,100014064","skuVal":{"actSkuCalPrice":"8.50","actSkuMultiCurrencyCalPrice":"33.43","actSkuMultiCurrencyDisplayPrice":"33,43","actSkuMultiCurrencyPrice":"R$ 33,43","actSkuPrice":"8.50","availQuantity":19,"inventory":20,"isActivity":true,"skuCalPrice":"10.63","skuMultiCurrencyCalPrice":"41.81","skuMultiCurrencyDisplayPrice":"41,81","skuMultiCurrencyPrice":"R$ 41,81","skuPrice":"10.63"}}
             $('#product-info-sku').filter ->
                 $(this).children('dl.product-info-color').find('li a').filter ->
@@ -184,6 +202,8 @@ class @Scraper
             # product-info-sku
 
             $('.product-params').filter ->
+                product_data['short_description'] = $(this).find('.ui-box-body').html()
+
                 $(this).find('dl').filter ->
                     attribute_data = {
                         name: $(this).find('dt').text().replace(/\:/g, ''),
@@ -193,6 +213,20 @@ class @Scraper
                     product_data['attributes'].push(attribute_data)
                 # dl
             # product-params
+
+            $('.seller-info .seller address').filter ->
+                product_data['country_region_of_manufacture'] = $(this).text().strip()
+            # seller-info
+
+            $('.pnl-packaging').filter ->
+                product_data['unit_type'] = $(this).find('dd').first().text()
+
+                product_data['package_weight'] = $(this).find('dd.pnl-packaging-weight').attr('rel')
+                product_data['package_weight_human'] = $(this).find('dd.pnl-packaging-weight').text()
+
+                product_data['package_size'] = $(this).find('dd.pnl-packaging-size').attr('rel')
+                product_data['package_size_human'] = $(this).find('dd.pnl-packaging-size').text()
+            # pnl-packaging
 
             query_params = {_id: product['_id']}
 
@@ -216,7 +250,13 @@ class @Scraper
                         product_data['description'] = description_matches[1]
                     # if
 
-                    Scraper.download_product_images product_data, download_directory_name, Meteor.bindEnvironment (product_data) ->
+                    ############################################################
+                    # TODO remove this
+                    # product_data['description'] = product_data['description'][0..100] + ' ...'
+                    # product_data['short_description'] = product_data['short_description'][0..100] + ' ...'
+                    ############################################################
+
+                    Scraper.download_product_images product_data, Meteor.bindEnvironment (product_data) ->
                         Products.update(query_params, product_data, {upsert: false})
                         product = Products.findOne(query_params)
 
@@ -224,26 +264,22 @@ class @Scraper
                     # download_product_images
                 # request
             else
-                Scraper.download_product_images product_data, download_directory_name, (product_data) ->
-                    Products.update(query_params, product_data, {upsert: false})
-                    product = Products.findOne(query_params)
-
-                    callback(null, product)
-                # download_product_images
+                callback(new Error("No Description"), null)
             # if
         # request
     # scrape_product
 
-    @download_product_images: (product_data, directory_name, callback) ->
+    @download_product_images: (product_data, callback) ->
         base_name = '/tmp/scraper/aliexpress'
-        product_directory = "#{base_name}/images/#{directory_name}/#{product_data['aliexpress_id']}"
+        product_directory = "#{base_name}/images/#{product_data['aliexpress_id']}"
+        product_color_directory = "#{base_name}/images/#{product_data['aliexpress_id']}/colors"
 
         mkdirp product_directory, (error) ->
             throw error if error
 
             i = 1
             for image_url in product_data['image_urls']
-                filename = "/images/#{directory_name}/#{product_data['aliexpress_id']}/#{i}.jpg"
+                filename = "/images/#{product_data['aliexpress_id']}/#{i}.jpg"
 
                 image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
                 image_request.on 'error', (error) ->
@@ -256,7 +292,27 @@ class @Scraper
                 i += 1
             # for
 
-            callback(product_data)
+            mkdirp product_color_directory, (error) ->
+                throw error if error
+
+                for color in product_data['colors']
+                    if color['thumb_url']
+                        filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title']}.jpg"
+
+                        image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
+                        image_request.on 'error', (error) ->
+                            console.log("Thumbnail download error: #{color['thumb_url']}")
+                            console.log(error)
+                        # error
+
+                        color['image'] = 'media/import' + filename
+                    else
+                        color['image'] = color['title']
+                    # if
+                # for
+
+                callback(product_data)
+            # mkdirp
         # mkdirp
     # download_product_images
 # Scraping

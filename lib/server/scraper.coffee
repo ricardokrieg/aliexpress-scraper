@@ -188,17 +188,51 @@ class @Scraper
             # TODO Should check if item is available
             # var skuProducts=[{"skuAttr":"14:173#blue;5:100014064","skuPropIds":"173,100014064","skuVal":{"actSkuCalPrice":"8.50","actSkuMultiCurrencyCalPrice":"33.43","actSkuMultiCurrencyDisplayPrice":"33,43","actSkuMultiCurrencyPrice":"R$ 33,43","actSkuPrice":"8.50","availQuantity":19,"inventory":20,"isActivity":true,"skuCalPrice":"10.63","skuMultiCurrencyCalPrice":"41.81","skuMultiCurrencyDisplayPrice":"41,81","skuMultiCurrencyPrice":"R$ 41,81","skuPrice":"10.63"}}
             $('#product-info-sku').filter ->
-                $(this).children('dl.product-info-color').find('li a').filter ->
-                    color_data = {
-                        title: $(this).attr('title'),
-                        thumb_url: $(this).children().first().attr('src')
-                    }
-                    product_data['colors'].push(color_data)
-                # product-info-color
+                product_data['option_types'] = []
 
-                $(this).children('dl.product-info-size').find('li a').filter ->
-                    product_data['sizes'].push($(this).text())
-                # product-info-size
+                $(this).children('dl').filter ->
+                    attribute_title = $(this).children('dt').text().strip().replace(/\:/g, '')
+                    attribute_values = []
+
+                    attribute_type = ''
+                    if $(this).find('ul').first().hasClass('sku-color')
+                        attribute_type = 'color'
+                    else if $(this).find('ul').first().hasClass('sku-checkbox')
+                        attribute_type = 'checkbox'
+                    else
+                        throw new Error("Invalid option type")
+                    # if
+
+                    $(this).find('li a').filter ->
+                        if attribute_type == 'color'
+                            attribute_values.push({
+                                url: $(this).children('img').first().attr('bigpic'),
+                                thumb_url: $(this).children('img').first().attr('src'),
+                                title: $(this).attr('title')
+                            })
+                        else
+                            attribute_values.push($(this).text())
+                        # if
+                    # li
+
+                    product_data['option_types'].push({
+                        title: attribute_title,
+                        type: attribute_type,
+                        values: attribute_values
+                    })
+                # dl
+
+                # $(this).children('dl.product-info-color').find('li a').filter ->
+                #     color_data = {
+                #         title: $(this).attr('title'),
+                #         thumb_url: $(this).children().first().attr('src')
+                #     }
+                #     product_data['colors'].push(color_data)
+                # # product-info-color
+
+                # $(this).children('dl.product-info-size').find('li a').filter ->
+                #     product_data['sizes'].push($(this).text())
+                # # product-info-size
             # product-info-sku
 
             $('.product-params').filter ->
@@ -252,8 +286,8 @@ class @Scraper
 
                     ############################################################
                     # TODO remove this
-                    # product_data['description'] = product_data['description'][0..100] + ' ...'
-                    # product_data['short_description'] = product_data['short_description'][0..100] + ' ...'
+                    product_data['description'] = product_data['description'][0..100] + ' ...'
+                    product_data['short_description'] = product_data['short_description'][0..100] + ' ...'
                     ############################################################
 
                     Scraper.download_product_images product_data, Meteor.bindEnvironment (product_data) ->
@@ -295,22 +329,58 @@ class @Scraper
             mkdirp product_color_directory, (error) ->
                 throw error if error
 
-                for color in product_data['colors']
-                    if color['thumb_url']
-                        filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}.jpg"
+                # for color in product_data['colors']
+                #     if color['thumb_url']
+                #         filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}.jpg"
 
-                        image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
-                        image_request.on 'error', (error) ->
-                            console.log("Thumbnail download error: #{color['thumb_url']}")
-                            console.log(error)
+                #         image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
+                #         image_request.on 'error', (error) ->
+                #             console.log("Thumbnail download error: #{color['thumb_url']}")
+                #             console.log(error)
 
+                #             color['image'] = color['title']
+                #         # error
+
+                #         color['image'] = 'media/import' + filename
+                #     else
+                #         color['image'] = color['title']
+                #     # if
+                # # for
+
+                for option_type in product_data['option_types'] when option_type['type'] == 'color'
+                    for color in option_type['values']
+                        if color['url']
+                            filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}.jpg"
+
+                            image_request = request(color['url']).pipe(fs.createWriteStream(base_name + filename))
+                            image_request.on 'error', (error) ->
+                                console.log("Color download error: #{color['url']}")
+                                console.log(error)
+
+                                color['image'] = color['title']
+                            # error
+
+                            color['image'] = 'media/import' + filename
+                        else
                             color['image'] = color['title']
-                        # error
+                        # if
 
-                        color['image'] = 'media/import' + filename
-                    else
-                        color['image'] = color['title']
-                    # if
+                        if color['thumb_url']
+                            filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}_thumb.jpg"
+
+                            image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
+                            image_request.on 'error', (error) ->
+                                console.log("Color thumbnail download error: #{color['thumb_url']}")
+                                console.log(error)
+
+                                color['thumb_image'] = color['title']
+                            # error
+
+                            color['thumb_image'] = 'media/import' + filename
+                        else
+                            color['thumb_image'] = color['title']
+                        # if
+                    # for
                 # for
 
                 callback(product_data)

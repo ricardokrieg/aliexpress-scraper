@@ -126,9 +126,8 @@ class @Scraper
                 category: [],
                 image_urls: [],
                 images: [],
-                colors: [],
-                sizes: [],
-                attributes: []
+                attributes: [],
+                option_types: []
             }
 
             $('h1.product-name[itemprop=name]').filter ->
@@ -188,8 +187,6 @@ class @Scraper
             # TODO Should check if item is available
             # var skuProducts=[{"skuAttr":"14:173#blue;5:100014064","skuPropIds":"173,100014064","skuVal":{"actSkuCalPrice":"8.50","actSkuMultiCurrencyCalPrice":"33.43","actSkuMultiCurrencyDisplayPrice":"33,43","actSkuMultiCurrencyPrice":"R$ 33,43","actSkuPrice":"8.50","availQuantity":19,"inventory":20,"isActivity":true,"skuCalPrice":"10.63","skuMultiCurrencyCalPrice":"41.81","skuMultiCurrencyDisplayPrice":"41,81","skuMultiCurrencyPrice":"R$ 41,81","skuPrice":"10.63"}}
             $('#product-info-sku').filter ->
-                product_data['option_types'] = []
-
                 $(this).children('dl').filter ->
                     attribute_title = $(this).children('dt').text().strip().replace(/\:/g, '')
                     attribute_values = []
@@ -208,10 +205,14 @@ class @Scraper
                             attribute_values.push({
                                 url: $(this).children('img').first().attr('bigpic'),
                                 thumb_url: $(this).children('img').first().attr('src'),
-                                title: $(this).attr('title')
+                                title: $(this).attr('title'),
+                                value: $(this).attr('title')
                             })
                         else
-                            attribute_values.push($(this).text())
+                            attribute_values.push({
+                                value: $(this).text(),
+                                title: $(this).text()
+                            })
                         # if
                     # li
 
@@ -361,6 +362,7 @@ class @Scraper
                             # error
 
                             color['image'] = 'media/import' + filename
+                            product_data['images'].push('media/import' + filename)
                         else
                             color['image'] = color['title']
                         # if
@@ -372,13 +374,9 @@ class @Scraper
                             image_request.on 'error', (error) ->
                                 console.log("Color thumbnail download error: #{color['thumb_url']}")
                                 console.log(error)
-
-                                color['thumb_image'] = color['title']
                             # error
 
-                            color['thumb_image'] = 'media/import' + filename
-                        else
-                            color['thumb_image'] = color['title']
+                            color['value'] = 'media/import' + filename
                         # if
                     # for
                 # for

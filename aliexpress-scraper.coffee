@@ -6,6 +6,7 @@ async = Meteor.npmRequire('async')
 Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000784/swimwear.html'
 Meteor.PRICE_MULTIPLIER = 0.3
 Meteor.PAGE_LIMIT = 1
+Meteor.CSV_DELIMITER = ';'
 
 do_export = (category_or_url) ->
     console.log "Exporting"
@@ -54,8 +55,11 @@ do_scrape = (category_url) ->
 # do_scrape
 
 do_test = ->
-    category = Categories.findOne({url: Meteor.CATEGORY_URL})
-    Products.remove()
+    Categories.remove({})
+    Categories.insert({url: 'aliexpress.com', name: 'Testing'})
+    category = Categories.findOne()
+
+    Products.remove({})
 
     product_urls = [
         # This to check if it gets the highest price and ignores the changes in price of >1 options
@@ -69,7 +73,8 @@ do_test = ->
     ]
 
     for product_url in product_urls
-        Products.insert({category_id: category._id, scraped: false, url: product_url, aliexpress_id: 'Testing'})
+        aliexpress_id = /^.*\/(.*)\.html.*$/.exec(product_url)[1]
+        Products.insert({category_id: category._id, scraped: false, url: product_url, aliexpress_id: aliexpress_id})
     # for
 
     products = Products.find({category_id: category._id, scraped: false}).fetch()

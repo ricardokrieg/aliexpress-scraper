@@ -69,9 +69,6 @@ class @Exporter
             tmp_variations = [Array(12)]
         # if
 
-        console.log "Temp Variations"
-        console.log util.inspect(tmp_variations, false, null)
-
         base_category = ''
         categories = ['']
         for category_name in product.category

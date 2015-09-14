@@ -109,7 +109,7 @@ class @Scraper
     @scrape_product: (product, callback) ->
         request Scraper.build_options(product['url']), Meteor.bindEnvironment (error, response, html) ->
             if error
-                console.log "#{product['aliexpress_id']} [Error]"
+                console.log chalk.red("#{product['aliexpress_id']} [Error]")
                 callback(error, null)
                 return
             # if
@@ -157,7 +157,7 @@ class @Scraper
             if price_matches and price_matches.length == 2
                 product_data['price'] = price_matches[1].toCurrency()
             else
-                console.log "#{product['aliexpress_id']} [Error][price]"
+                console.log chalk.red("#{product['aliexpress_id']} [Error][price]")
                 callback(new Error("Could not get price", null))
                 return
             # if
@@ -185,7 +185,6 @@ class @Scraper
             # if
 
             # TODO Should check if item is available
-            # var skuProducts=[{"skuAttr":"14:173#blue;5:100014064","skuPropIds":"173,100014064","skuVal":{"actSkuCalPrice":"8.50","actSkuMultiCurrencyCalPrice":"33.43","actSkuMultiCurrencyDisplayPrice":"33,43","actSkuMultiCurrencyPrice":"R$ 33,43","actSkuPrice":"8.50","availQuantity":19,"inventory":20,"isActivity":true,"skuCalPrice":"10.63","skuMultiCurrencyCalPrice":"41.81","skuMultiCurrencyDisplayPrice":"41,81","skuMultiCurrencyPrice":"R$ 41,81","skuPrice":"10.63"}}
             $('#product-info-sku').filter ->
                 $(this).children('dl').filter ->
                     attribute_title = $(this).children('dt').text().strip().replace(/\:/g, '')
@@ -199,6 +198,9 @@ class @Scraper
                     else
                         throw new Error("Invalid option type")
                     # if
+
+                    sku_prop_id = $(this).find('ul').attr('data-sku-prop-id')
+                    sku_prop_id = 'no-id' unless sku_prop_id
 
                     $(this).find('li a').filter ->
                         if attribute_type == 'color'
@@ -217,6 +219,7 @@ class @Scraper
                     # li
 
                     product_data['option_types'].push({
+                        sku_prop_id: sku_prop_id,
                         title: attribute_title,
                         type: attribute_type,
                         values: attribute_values
@@ -235,6 +238,27 @@ class @Scraper
                 #     product_data['sizes'].push($(this).text())
                 # # product-info-size
             # product-info-sku
+
+            sku_regex = /var skuProducts=(.*);/i
+            sku_matches = sku_regex.exec(html)
+
+            if sku_matches and sku_matches.length == 2
+                sku_properties = []
+                for sku in JSON.parse(sku_matches[1])
+                    sku_properties.push({
+                        attr: sku['skuAttr'],
+                        prop_ids: sku['skuPropIds'],
+                        price: sku['skuVal']['skuPrice']
+                    })
+                # for
+
+                product_data['sku_properties'] = sku_properties
+
+                sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
+                console.log sku_prop_ids
+            else
+                throw new Error("No SKU matches")
+            # if
 
             $('.product-params').filter ->
                 product_data['short_description'] = $(this).find('.ui-box-body').html()
@@ -273,7 +297,7 @@ class @Scraper
 
                 request Scraper.build_options(description_url), Meteor.bindEnvironment (error, response, html) ->
                     if error
-                        console.log "#{product['aliexpress_id']} [Error][description]"
+                        console.log chalk.red("#{product['aliexpress_id']} [Error][description]")
                         callback(error, null)
                         return
                     # if
@@ -318,7 +342,7 @@ class @Scraper
 
                 image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
                 image_request.on 'error', (error) ->
-                    console.log("Image download error: #{image_url}")
+                    console.log chalk.red("Image download error: #{image_url}")
                     console.log(error)
                 # error
 
@@ -355,7 +379,7 @@ class @Scraper
 
                             image_request = request(color['url']).pipe(fs.createWriteStream(base_name + filename))
                             image_request.on 'error', (error) ->
-                                console.log("Color download error: #{color['url']}")
+                                console.log chalk.red("Color download error: #{color['url']}")
                                 console.log(error)
 
                                 color['image'] = color['title']
@@ -372,7 +396,7 @@ class @Scraper
 
                             image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
                             image_request.on 'error', (error) ->
-                                console.log("Color thumbnail download error: #{color['thumb_url']}")
+                                console.log chalk.red("Color thumbnail download error: #{color['thumb_url']}")
                                 console.log(error)
                             # error
 

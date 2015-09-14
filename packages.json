@@ -6,5 +6,6 @@
     "sanitize-html": "1.7.2",
     "graceful-fs": "4.1.2",
     "async": "1.4.0",
-    "moment": "2.10.6"
+    "moment": "2.10.6",
+    "chalk": "1.1.1"
 }

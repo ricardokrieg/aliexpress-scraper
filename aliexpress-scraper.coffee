@@ -2,6 +2,9 @@
 
 util = Meteor.npmRequire('util')
 async = Meteor.npmRequire('async')
+chalk = Meteor.npmRequire('chalk')
+
+chalk.enabled = true
 
 Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000784/swimwear.html'
 Meteor.PRICE_MULTIPLIER = 0.3
@@ -40,7 +43,7 @@ do_scrape = (category_url) ->
                     async_products_callback()
                 # scrape_product
             catch e
-                console.log "#{product['aliexpress_id']} [Error][#{e.message}]"
+                console.log chalk.red("#{product['aliexpress_id']} [Error][#{e.message}]")
 
                 async_products_callback()
             # try
@@ -63,13 +66,23 @@ do_test = ->
 
     product_urls = [
         # This to check if it gets the highest price and ignores the changes in price of >1 options
-        'http://www.aliexpress.com/item/Womens-Elegant-Sleeveless-Bowknot-Patchwork-Office-Lady-Pencil-Wear-to-Work-Business-Casual-Bodycon-Sheath-Dress/32458714518.html?spm=2114.031010208.3.30.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
-        'http://www.aliexpress.com/item/2015-New-Summer-Women-s-Sexy-top-Backless-Bowknot-Decoration-round-collar-Solid-Color-Chiffon-Shirt/32372960210.html?spm=2114.031010208.3.181.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
+        # multiple changes
+        # all option types:
+        # _custom_option_row_price = 0
+        # price = maxPrice
+        # 'http://www.aliexpress.com/item/Womens-Elegant-Sleeveless-Bowknot-Patchwork-Office-Lady-Pencil-Wear-to-Work-Business-Casual-Bodycon-Sheath-Dress/32458714518.html?spm=2114.031010208.3.30.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
+        # 'http://www.aliexpress.com/item/2015-New-Summer-Women-s-Sexy-top-Backless-Bowknot-Decoration-round-collar-Solid-Color-Chiffon-Shirt/32372960210.html?spm=2114.031010208.3.181.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
 
         # this to make sure it gets price changes from the 1 option that price changes
+        # only one changes
+        # option type that dont change:
+        # _custom_option_row_price = 0
+        # option type that change:
+        # _custom_option_row_price = (option value price) - minPrice
+        # price = minPrice
         'http://www.aliexpress.com/item/Classic-14Karat-White-Gold-Wedding-Rings-for-Women-0-6CT-Prong-Setting-Synthetic-Diamond-Engagement-Ring/32447513738.html?ws_ab_test=201407_3,201444_6,201409_2',
-        'http://www.aliexpress.com/item/2015-New-Fashion-Vintage-Necklaces-Za-Crystal-Multilayer-Statement-Necklace-Body-Chain-Stone-Choke-Necklaces-PendantsFor/32427059548.html?spm=2114.030010108.3.11.nBgCTL&ws_ab_test=201407_1,201444_6,201409_1',
-        'http://www.aliexpress.com/item/Free-shipping-35inch-Super-Long-one-piece-5-clips-in-hair-extensions-amazing-curl-synthetic-hair/1266683115.html?spm=2114.030010108.3.185.6KiSbf&ws_ab_test=201407_1,201444_6,201409_1'
+        # 'http://www.aliexpress.com/item/2015-New-Fashion-Vintage-Necklaces-Za-Crystal-Multilayer-Statement-Necklace-Body-Chain-Stone-Choke-Necklaces-PendantsFor/32427059548.html?spm=2114.030010108.3.11.nBgCTL&ws_ab_test=201407_1,201444_6,201409_1',
+        # 'http://www.aliexpress.com/item/Free-shipping-35inch-Super-Long-one-piece-5-clips-in-hair-extensions-amazing-curl-synthetic-hair/1266683115.html?spm=2114.030010108.3.185.6KiSbf&ws_ab_test=201407_1,201444_6,201409_1'
     ]
 
     for product_url in product_urls
@@ -87,7 +100,7 @@ do_test = ->
                 async_products_callback()
             # scrape_product
         catch e
-            console.log "#{product['aliexpress_id']} [Error][#{e.message}]"
+            console.log chalk.red("#{product['aliexpress_id']} [Error][#{e.message}]")
 
             async_products_callback()
         # try

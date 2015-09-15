@@ -503,7 +503,7 @@ class @Scraper
                 filename = "/images/#{product_data['aliexpress_id']}/#{i}.jpg"
 
                 try
-                    image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
+                    image_request = request(Scraper.build_options(image_url)).pipe(fs.createWriteStream(base_name + filename))
                     image_request.on 'error', (err) ->
                         console.log chalk.red("Image download error: #{image_url}")
                     # error
@@ -546,7 +546,7 @@ class @Scraper
                             filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}.jpg"
 
                             try
-                                image_request = request(color['url']).pipe(fs.createWriteStream(base_name + filename))
+                                image_request = request(Scraper.build_options(color['url'])).pipe(fs.createWriteStream(base_name + filename))
                                 image_request.on 'error', (err) ->
                                     console.log chalk.red("Color download error: #{color['url']}")
 
@@ -568,7 +568,7 @@ class @Scraper
                             filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}_thumb.jpg"
 
                             try
-                                image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
+                                image_request = request(Scraper.build_options(color['thumb_url'])).pipe(fs.createWriteStream(base_name + filename))
                                 image_request.on 'error', (err) ->
                                     console.log chalk.red("Color thumbnail download error: #{color['thumb_url']}")
                                 # error

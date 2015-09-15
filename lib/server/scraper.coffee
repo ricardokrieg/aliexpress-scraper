@@ -364,11 +364,15 @@ class @Scraper
 
                 for option_type in product_data['option_types']
                     for option_value in option_type['values']
-                        sku_attr = "#{option_type['sku_prop_id']}:#{option_value['sku_id']}"
-                        for sku_property in sku_properties when sku_attr in sku_property['attr'].split(';')
-                            option_value['price'] = (parseFloat(sku_property['price']) - parseFloat(product_data['price'])).toFixed(2)
-                            break
-                        # for
+                        if option_type['price_changed']
+                            sku_attr = "#{option_type['sku_prop_id']}:#{option_value['sku_id']}"
+                            for sku_property in sku_properties when sku_attr in sku_property['attr'].split(';')
+                                option_value['price'] = (parseFloat(sku_property['price']) - parseFloat(product_data['price'])).toFixed(2)
+                                break
+                            # for
+                        else
+                            option_value['price'] = parseFloat(0).toFixed(2)
+                        # if
                     # for
                 # for
             else
@@ -430,10 +434,18 @@ class @Scraper
                         product_data['description'] = description_matches[1]
                     # if
 
+                    $ = cheerio.load(product_data['description'])
+                    $('img').filter ->
+                        product_data['image_urls'].push($(this).attr('src')) if $(this).attr('src')
+                        $(this).remove()
+                    # img
+
+                    product_data['description'] = $.html()
+
                     ############################################################
                     # TODO remove this
-                    product_data['description'] = product_data['description'][0..100] + ' ...'
-                    product_data['short_description'] = product_data['short_description'][0..100] + ' ...'
+                    # product_data['description'] = product_data['description'][0..100] + ' ...'
+                    # product_data['short_description'] = product_data['short_description'][0..100] + ' ...'
                     ############################################################
 
                     Scraper.download_product_images product_data, Meteor.bindEnvironment (product_data) ->
@@ -461,13 +473,16 @@ class @Scraper
             for image_url in product_data['image_urls']
                 filename = "/images/#{product_data['aliexpress_id']}/#{i}.jpg"
 
-                image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
-                image_request.on 'error', (error) ->
-                    console.log chalk.red("Image download error: #{image_url}")
-                    console.log(error)
-                # error
+                try
+                    image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
+                    image_request.on 'error', (error) ->
+                        console.log chalk.red("Image download error: #{image_url}")
+                    # error
 
-                product_data['images'].push('media/import' + filename)
+                    product_data['images'].push('media/import' + filename)
+                catch e
+                    console.log chalk.red("Image download error: #{image_url}")
+                # try
 
                 i += 1
             # for
@@ -498,16 +513,21 @@ class @Scraper
                         if color['url']
                             filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}.jpg"
 
-                            image_request = request(color['url']).pipe(fs.createWriteStream(base_name + filename))
-                            image_request.on 'error', (error) ->
+                            try
+                                image_request = request(color['url']).pipe(fs.createWriteStream(base_name + filename))
+                                image_request.on 'error', (error) ->
+                                    console.log chalk.red("Color download error: #{color['url']}")
+
+                                    color['image'] = color['title']
+                                # error
+
+                                color['image'] = 'media/import' + filename
+                                product_data['images'].push('media/import' + filename)
+                            catch e
                                 console.log chalk.red("Color download error: #{color['url']}")
-                                console.log(error)
 
                                 color['image'] = color['title']
-                            # error
-
-                            color['image'] = 'media/import' + filename
-                            product_data['images'].push('media/import' + filename)
+                            # try
                         else
                             color['image'] = color['title']
                         # if
@@ -515,13 +535,16 @@ class @Scraper
                         if color['thumb_url']
                             filename = "/images/#{product_data['aliexpress_id']}/colors/#{color['title'].replace(/\W/g, '-')}_thumb.jpg"
 
-                            image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
-                            image_request.on 'error', (error) ->
-                                console.log chalk.red("Color thumbnail download error: #{color['thumb_url']}")
-                                console.log(error)
-                            # error
+                            try
+                                image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
+                                image_request.on 'error', (error) ->
+                                    console.log chalk.red("Color thumbnail download error: #{color['thumb_url']}")
+                                # error
 
-                            color['value'] = 'media/import' + filename
+                                color['value'] = 'media/import' + filename
+                            catch e
+                                console.log chalk.red("Color thumbnail download error: #{color['thumb_url']}")
+                            # try
                         # if
                     # for
                 # for

@@ -178,7 +178,7 @@ class @Scraper
                 product_data['min_price'] = min_price_matches[1].toCurrency()
             else
                 console.log chalk.red("#{product['aliexpress_id']} [Error][min_price]")
-                callback(new Error("Could not get price", product))
+                callback(new Error("Could not get price"), product)
                 return
             # if
 
@@ -188,7 +188,7 @@ class @Scraper
                 product_data['max_price'] = max_price_matches[1].toCurrency()
             else
                 console.log chalk.red("#{product['aliexpress_id']} [Error][max_price]")
-                callback(new Error("Could not get price", product))
+                callback(new Error("Could not get price"), product)
                 return
             # if
 

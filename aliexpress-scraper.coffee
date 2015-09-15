@@ -70,8 +70,8 @@ do_test = ->
         # all option types:
         # _custom_option_row_price = 0
         # price = maxPrice
-        # 'http://www.aliexpress.com/item/Womens-Elegant-Sleeveless-Bowknot-Patchwork-Office-Lady-Pencil-Wear-to-Work-Business-Casual-Bodycon-Sheath-Dress/32458714518.html?spm=2114.031010208.3.30.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
-        # 'http://www.aliexpress.com/item/2015-New-Summer-Women-s-Sexy-top-Backless-Bowknot-Decoration-round-collar-Solid-Color-Chiffon-Shirt/32372960210.html?spm=2114.031010208.3.181.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
+        'http://www.aliexpress.com/item/Womens-Elegant-Sleeveless-Bowknot-Patchwork-Office-Lady-Pencil-Wear-to-Work-Business-Casual-Bodycon-Sheath-Dress/32458714518.html?spm=2114.031010208.3.30.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
+        'http://www.aliexpress.com/item/2015-New-Summer-Women-s-Sexy-top-Backless-Bowknot-Decoration-round-collar-Solid-Color-Chiffon-Shirt/32372960210.html?spm=2114.031010208.3.181.aQl6Sl&ws_ab_test=201407_1,201444_6,201409_1',
 
         # this to make sure it gets price changes from the 1 option that price changes
         # only one changes
@@ -81,8 +81,12 @@ do_test = ->
         # _custom_option_row_price = (option value price) - minPrice
         # price = minPrice
         'http://www.aliexpress.com/item/Classic-14Karat-White-Gold-Wedding-Rings-for-Women-0-6CT-Prong-Setting-Synthetic-Diamond-Engagement-Ring/32447513738.html?ws_ab_test=201407_3,201444_6,201409_2',
-        # 'http://www.aliexpress.com/item/2015-New-Fashion-Vintage-Necklaces-Za-Crystal-Multilayer-Statement-Necklace-Body-Chain-Stone-Choke-Necklaces-PendantsFor/32427059548.html?spm=2114.030010108.3.11.nBgCTL&ws_ab_test=201407_1,201444_6,201409_1',
-        # 'http://www.aliexpress.com/item/Free-shipping-35inch-Super-Long-one-piece-5-clips-in-hair-extensions-amazing-curl-synthetic-hair/1266683115.html?spm=2114.030010108.3.185.6KiSbf&ws_ab_test=201407_1,201444_6,201409_1'
+        'http://www.aliexpress.com/item/2015-New-Fashion-Vintage-Necklaces-Za-Crystal-Multilayer-Statement-Necklace-Body-Chain-Stone-Choke-Necklaces-PendantsFor/32427059548.html?spm=2114.030010108.3.11.nBgCTL&ws_ab_test=201407_1,201444_6,201409_1',
+        'http://www.aliexpress.com/item/Free-shipping-35inch-Super-Long-one-piece-5-clips-in-hair-extensions-amazing-curl-synthetic-hair/1266683115.html?spm=2114.030010108.3.185.6KiSbf&ws_ab_test=201407_1,201444_6,201409_1',
+
+        # no modifiers
+        'http://pt.aliexpress.com/item/Fancyinn-Women-One-Piece-Swimsuit-Deep-V-neck-Bacless-Black-and-White-Bathing-Suit-Sexy-Swimwear/32405608652.html?spm=2114.02010108.3.24.vHqmjZ&ws_ab_test=201407_4,201444_6_3_2_1_5_4,201409_3',
+        'http://pt.aliexpress.com/item/2015-Sexy-Print-Bikinis-Push-Up-Swimwear-Cheap-Women-Bikinis-Brazilian-push-up-low-waist-Bath/32378414722.html?spm=2114.02010108.3.56.vHqmjZ&ws_ab_test=201407_4,201444_6_3_2_1_5_4,201409_3',
     ]
 
     for product_url in product_urls

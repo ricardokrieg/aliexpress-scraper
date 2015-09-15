@@ -5,6 +5,9 @@ async = Meteor.npmRequire('async')
 moment = Meteor.npmRequire('moment')
 fs = Meteor.npmRequire('graceful-fs')
 mkdirp = Meteor.npmRequire('mkdirp')
+chalk = Meteor.npmRequire('chalk')
+
+chalk.enabled = true
 
 class @Scraper
     @proxy: ->
@@ -127,7 +130,8 @@ class @Scraper
                 image_urls: [],
                 images: [],
                 attributes: [],
-                option_types: []
+                option_types: [],
+                count_price_modifiers: 0
             }
 
             $('h1.product-name[itemprop=name]').filter ->
@@ -152,12 +156,22 @@ class @Scraper
             #         $(this).children('#multi-currency-price').text().strip()
             # # multi-currency
 
-            price_regex = /.*window\.runParams\.maxPrice=\"(.*)\".*/i
-            price_matches = price_regex.exec(html)
-            if price_matches and price_matches.length == 2
-                product_data['price'] = price_matches[1].toCurrency()
+            min_price_regex = /.*window\.runParams\.minPrice=\"(.*)\".*/i
+            min_price_matches = min_price_regex.exec(html)
+            if min_price_matches and min_price_matches.length == 2
+                product_data['min_price'] = min_price_matches[1].toCurrency()
             else
-                console.log chalk.red("#{product['aliexpress_id']} [Error][price]")
+                console.log chalk.red("#{product['aliexpress_id']} [Error][min_price]")
+                callback(new Error("Could not get price", null))
+                return
+            # if
+
+            max_price_regex = /.*window\.runParams\.maxPrice=\"(.*)\".*/i
+            max_price_matches = max_price_regex.exec(html)
+            if max_price_matches and max_price_matches.length == 2
+                product_data['max_price'] = max_price_matches[1].toCurrency()
+            else
+                console.log chalk.red("#{product['aliexpress_id']} [Error][max_price]")
                 callback(new Error("Could not get price", null))
                 return
             # if
@@ -184,6 +198,39 @@ class @Scraper
                 # thumb
             # if
 
+            sku_regex = /var skuProducts=(.*);/i
+            sku_matches = sku_regex.exec(html)
+            sku_prop_ids = []
+            sku_properties = []
+
+            if sku_matches and sku_matches.length == 2
+                for sku in JSON.parse(sku_matches[1])
+                    sku_attr = []
+                    for a in sku['skuAttr'].split(';')
+                        temp = []
+                        for b in a.split(':')
+                            if b.indexOf('#') != -1
+                                b = b[0..b.indexOf('#')-1]
+                            # if
+                            temp.push(b)
+                        # for
+                        sku_attr.push(temp.join(':'))
+                    # for
+                    sku_attr = sku_attr.join(';')
+
+                    sku_properties.push({
+                        attr: sku_attr,
+                        prop_ids: sku['skuPropIds'],
+                        price: sku['skuVal']['skuPrice']
+                    })
+                # for
+
+                product_data['sku_properties'] = sku_properties
+                sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
+            else
+                throw new Error("No SKU matches")
+            # if
+
             # TODO Should check if item is available
             $('#product-info-sku').filter ->
                 $(this).children('dl').filter ->
@@ -200,20 +247,23 @@ class @Scraper
                     # if
 
                     sku_prop_id = $(this).find('ul').attr('data-sku-prop-id')
-                    sku_prop_id = 'no-id' unless sku_prop_id
 
                     $(this).find('li a').filter ->
+                        sku_id = /^sku\-\d+\-(.*)$/.exec($(this).attr('id'))[1]
+
                         if attribute_type == 'color'
                             attribute_values.push({
                                 url: $(this).children('img').first().attr('bigpic'),
                                 thumb_url: $(this).children('img').first().attr('src'),
                                 title: $(this).attr('title'),
-                                value: $(this).attr('title')
+                                value: $(this).attr('title'),
+                                sku_id: sku_id
                             })
                         else
                             attribute_values.push({
                                 value: $(this).text(),
-                                title: $(this).text()
+                                title: $(this).text(),
+                                sku_id: sku_id
                             })
                         # if
                     # li
@@ -222,42 +272,113 @@ class @Scraper
                         sku_prop_id: sku_prop_id,
                         title: attribute_title,
                         type: attribute_type,
+                        price_changed: false,
                         values: attribute_values
                     })
                 # dl
-
-                # $(this).children('dl.product-info-color').find('li a').filter ->
-                #     color_data = {
-                #         title: $(this).attr('title'),
-                #         thumb_url: $(this).children().first().attr('src')
-                #     }
-                #     product_data['colors'].push(color_data)
-                # # product-info-color
-
-                # $(this).children('dl.product-info-size').find('li a').filter ->
-                #     product_data['sizes'].push($(this).text())
-                # # product-info-size
             # product-info-sku
 
-            sku_regex = /var skuProducts=(.*);/i
-            sku_matches = sku_regex.exec(html)
+            for option_type in product_data['option_types'] when option_type['sku_prop_id']
+                sku_prop_ids.splice(sku_prop_ids.indexOf(option_type['sku_prop_id']), 1)
+            # for
+            throw new Error("Invalid SKU Count") if sku_prop_ids.length > 1
+            for option_type in product_data['option_types'] when not option_type['sku_prop_id']
+                option_type['sku_prop_id'] = sku_prop_ids.shift()
+            # for
 
-            if sku_matches and sku_matches.length == 2
-                sku_properties = []
-                for sku in JSON.parse(sku_matches[1])
-                    sku_properties.push({
-                        attr: sku['skuAttr'],
-                        prop_ids: sku['skuPropIds'],
-                        price: sku['skuVal']['skuPrice']
-                    })
+            for option_type in product_data['option_types']
+                combinations = []
+
+                for option_value in option_type['values']
+                    sku_attr_id = "#{option_type['sku_prop_id']}:#{option_value['sku_id']}"
+                    combinations.push(sku_attr_id)
                 # for
 
-                product_data['sku_properties'] = sku_properties
+                option_type['combinations'] = combinations
+            # for
 
-                sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
-                console.log sku_prop_ids
+            for option_type in product_data['option_types']
+                all_searches = []
+
+                for sku_property in sku_properties
+                    sku_attr_ids = sku_property['attr'].split(';')
+                    # sku_price = sku_property['price']
+
+                    for sku_attr_id in sku_attr_ids when sku_attr_id.split(':')[0] == option_type['sku_prop_id']
+                        sku_attr_id_base = sku_attr_id
+                        break
+                    # for
+                # for
+
+                for sku_property_search in sku_properties
+                    sku_property_search_ids = sku_property_search['attr'].split(';')
+
+                    if sku_attr_id_base in sku_property_search_ids
+                        sku_price = sku_property_search['price']
+
+                        other_sku_attr_ids = sku_property_search_ids
+                        other_sku_attr_ids.splice(other_sku_attr_ids.indexOf(sku_attr_id_base), 1)
+
+                        all_searches.push({
+                            base: sku_attr_id_base,
+                            price: sku_price,
+                            others: other_sku_attr_ids
+                        })
+                    # if
+                # for
+
+                for search in all_searches
+                    sku_attr_id_base = search['base']
+                    sku_price = search['price']
+                    other_sku_attr_ids = search['others']
+
+                    for combination in option_type['combinations']
+                        for sku_property in sku_properties
+                            check = true
+                            for other_sku_attr_id in other_sku_attr_ids
+                                if other_sku_attr_id not in sku_property['attr'].split(';')
+                                    check = false
+                                    break
+                                # if
+                            # for
+                            if combination not in sku_property['attr'].split(';')
+                                check = false
+                            # if
+
+                            if check
+                                if sku_property['price'] != sku_price
+                                    option_type['price_changed'] = true
+                                # if
+                            # if
+
+                            break if option_type['price_changed']
+                        # for
+                    # for
+                # for
+
+                product_data['count_price_modifiers'] += 1 if option_type['price_changed']
+            # for
+
+            if product_data['count_price_modifiers'] == 1
+                product_data['price'] = product_data['min_price']
+
+                for option_type in product_data['option_types']
+                    for option_value in option_type['values']
+                        sku_attr = "#{option_type['sku_prop_id']}:#{option_value['sku_id']}"
+                        for sku_property in sku_properties when sku_attr in sku_property['attr'].split(';')
+                            option_value['price'] = (parseFloat(sku_property['price']) - parseFloat(product_data['price'])).toFixed(2)
+                            break
+                        # for
+                    # for
+                # for
             else
-                throw new Error("No SKU matches")
+                product_data['price'] = product_data['max_price']
+
+                for option_type in product_data['option_types']
+                    for option_value in option_type['values']
+                        option_value['price'] = parseFloat(0).toFixed(2)
+                    # for
+                # for
             # if
 
             $('.product-params').filter ->

@@ -31,18 +31,6 @@ class @Exporter
             tmp_images.push(image)
         # for
 
-        # variations = {
-        #     colors: (color['image'] for color in product.colors),
-        #     sizes: product.sizes
-        # }
-
-        # variations = {}
-        # for option_type in product.option_types
-        #     variations[option_type['title']] = option_type
-        # # for
-        # console.log "Variations"
-        # console.log util.inspect(variations, false, null)
-
         tmp_variations = []
         for option_type in product.option_types
             option_values = option_type['values']
@@ -50,16 +38,12 @@ class @Exporter
 
             if option_values.length > 0
                 option_value = option_values.shift()
-                # TODO scrape variation's SKU
-                # TODO add new column for thumb image
-                tmp_variations.push(['drop_down', option_type['title'], 1, null, null, null, 0, option_value['title'], 0, "#{product.aliexpress_id}-#{option_type['title']}-#{option_value['title']}", i, option_value['value']])
+                tmp_variations.push(['drop_down', option_type['title'], 1, null, null, null, 0, option_value['title'], option_value['price'], "#{product.aliexpress_id}-#{option_type['title']}-#{option_value['title']}", i, option_value['value']])
 
                 i++
                 for option_value in option_values
                     ov = option_values.shift()
-                    # TODO scrape variation's SKU
-                    # TODO add new column for thumb image
-                    tmp_variations.push([null, null, 1, null, null, null, 0, ov['title'], 0, "#{product.aliexpress_id}-#{option_type['title']}-#{ov['title']}", i, ov['value']])
+                    tmp_variations.push([null, null, 1, null, null, null, 0, ov['title'], ov['price'], "#{product.aliexpress_id}-#{option_type['title']}-#{ov['title']}", i, ov['value']])
                     i++
                 # for
             # if

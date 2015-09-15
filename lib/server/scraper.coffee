@@ -57,10 +57,15 @@ class @Scraper
 
         console.log "Scraping category ##{category.name}"
 
-        Scraper.scrape_category_page category_url, 1, category._id, (total_pages) ->
+        Scraper.scrape_category_page category_url, 1, category._id, (err, total_pages) ->
+            if err
+                callback(err, null)
+                return
+            # if
+
             console.log "Total of pages: #{total_pages}"
 
-            callback(category)
+            callback(null, category)
         # scrape_category_page
     # scrape_category
 
@@ -69,7 +74,12 @@ class @Scraper
 
         # request = Meteor.npmRequire('request').defaults({'proxy': Scraper.proxy()})
 
-        request Scraper.build_options(category_page_url), Meteor.bindEnvironment (error, response, html) ->
+        request Scraper.build_options(category_page_url), Meteor.bindEnvironment (err, response, html) ->
+            if err
+                callback(err, null)
+                return
+            # if
+
             $ = cheerio.load(html)
 
             products = []
@@ -100,7 +110,7 @@ class @Scraper
             # page-end
 
             if last_page or (Meteor.PAGE_LIMIT >= 0 and page_number >= Meteor.PAGE_LIMIT)
-                callback(page_number)
+                callback(null, page_number)
             else
                 $('a.page-next.ui-pagination-next').filter ->
                     Scraper.scrape_category_page($(this).attr('href'), page_number+1, category_id, callback)
@@ -110,10 +120,9 @@ class @Scraper
     # scrape_category_page
 
     @scrape_product: (product, callback) ->
-        request Scraper.build_options(product['url']), Meteor.bindEnvironment (error, response, html) ->
-            if error
-                console.log chalk.red("#{product['aliexpress_id']} [Error]")
-                callback(error, null)
+        request Scraper.build_options(product['url']), Meteor.bindEnvironment (err, response, html) ->
+            if err
+                callback(err, product)
                 return
             # if
 
@@ -162,7 +171,7 @@ class @Scraper
                 product_data['min_price'] = min_price_matches[1].toCurrency()
             else
                 console.log chalk.red("#{product['aliexpress_id']} [Error][min_price]")
-                callback(new Error("Could not get price", null))
+                callback(new Error("Could not get price", product))
                 return
             # if
 
@@ -172,7 +181,7 @@ class @Scraper
                 product_data['max_price'] = max_price_matches[1].toCurrency()
             else
                 console.log chalk.red("#{product['aliexpress_id']} [Error][max_price]")
-                callback(new Error("Could not get price", null))
+                callback(new Error("Could not get price", product))
                 return
             # if
 
@@ -204,31 +213,37 @@ class @Scraper
             sku_properties = []
 
             if sku_matches and sku_matches.length == 2
-                for sku in JSON.parse(sku_matches[1])
-                    sku_attr = []
-                    for a in sku['skuAttr'].split(';')
-                        temp = []
-                        for b in a.split(':')
-                            if b.indexOf('#') != -1
-                                b = b[0..b.indexOf('#')-1]
-                            # if
-                            temp.push(b)
+                try
+                    for sku in JSON.parse(sku_matches[1])
+                        sku_attr = []
+                        for a in sku['skuAttr'].split(';')
+                            temp = []
+                            for b in a.split(':')
+                                if b.indexOf('#') != -1
+                                    b = b[0..b.indexOf('#')-1]
+                                # if
+                                temp.push(b)
+                            # for
+                            sku_attr.push(temp.join(':'))
                         # for
-                        sku_attr.push(temp.join(':'))
+                        sku_attr = sku_attr.join(';')
+
+                        sku_properties.push({
+                            attr: sku_attr,
+                            prop_ids: sku['skuPropIds'],
+                            price: sku['skuVal']['skuPrice']
+                        })
                     # for
-                    sku_attr = sku_attr.join(';')
 
-                    sku_properties.push({
-                        attr: sku_attr,
-                        prop_ids: sku['skuPropIds'],
-                        price: sku['skuVal']['skuPrice']
-                    })
-                # for
-
-                product_data['sku_properties'] = sku_properties
-                sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
+                    product_data['sku_properties'] = sku_properties
+                    sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
+                catch e
+                    callback(new Error("Error in SKU info [#{e.message}]"), product)
+                    return
+                # try
             else
-                throw new Error("No SKU matches")
+                callback(new Error("No SKU matches"), product)
+                return
             # if
 
             # TODO Should check if item is available
@@ -243,7 +258,8 @@ class @Scraper
                     else if $(this).find('ul').first().hasClass('sku-checkbox')
                         attribute_type = 'checkbox'
                     else
-                        throw new Error("Invalid option type")
+                        callback(new Error("Invalid option type"), product)
+                        return
                     # if
 
                     sku_prop_id = $(this).find('ul').attr('data-sku-prop-id')
@@ -281,7 +297,12 @@ class @Scraper
             for option_type in product_data['option_types'] when option_type['sku_prop_id']
                 sku_prop_ids.splice(sku_prop_ids.indexOf(option_type['sku_prop_id']), 1)
             # for
-            throw new Error("Invalid SKU Count") if sku_prop_ids.length > 1
+
+            if sku_prop_ids.length > 1
+                callback(new Error("Invalid SKU Count"), product)
+                return
+            # if
+
             for option_type in product_data['option_types'] when not option_type['sku_prop_id']
                 option_type['sku_prop_id'] = sku_prop_ids.shift()
             # for
@@ -420,10 +441,9 @@ class @Scraper
             if description_url_matches and description_url_matches.length == 2
                 description_url = description_url_matches[1]
 
-                request Scraper.build_options(description_url), Meteor.bindEnvironment (error, response, html) ->
-                    if error
-                        console.log chalk.red("#{product['aliexpress_id']} [Error][description]")
-                        callback(error, null)
+                request Scraper.build_options(description_url), Meteor.bindEnvironment (err, response, html) ->
+                    if err
+                        callback(err, product)
                         return
                     # if
 
@@ -448,7 +468,12 @@ class @Scraper
                     # product_data['short_description'] = product_data['short_description'][0..100] + ' ...'
                     ############################################################
 
-                    Scraper.download_product_images product_data, Meteor.bindEnvironment (product_data) ->
+                    Scraper.download_product_images product_data, Meteor.bindEnvironment (err, product_data) ->
+                        if err
+                            callback(err, product)
+                            return
+                        # if
+
                         Products.update(query_params, product_data, {upsert: false})
                         product = Products.findOne(query_params)
 
@@ -456,7 +481,8 @@ class @Scraper
                     # download_product_images
                 # request
             else
-                callback(new Error("No Description"), null)
+                callback(new Error("No Description"), product)
+                return
             # if
         # request
     # scrape_product
@@ -466,8 +492,11 @@ class @Scraper
         product_directory = "#{base_name}/images/#{product_data['aliexpress_id']}"
         product_color_directory = "#{base_name}/images/#{product_data['aliexpress_id']}/colors"
 
-        mkdirp product_directory, (error) ->
-            throw error if error
+        mkdirp product_directory, (err) ->
+            if err
+                callback(err, null)
+                return
+            # if
 
             i = 1
             for image_url in product_data['image_urls']
@@ -475,7 +504,7 @@ class @Scraper
 
                 try
                     image_request = request(image_url).pipe(fs.createWriteStream(base_name + filename))
-                    image_request.on 'error', (error) ->
+                    image_request.on 'error', (err) ->
                         console.log chalk.red("Image download error: #{image_url}")
                     # error
 
@@ -487,8 +516,11 @@ class @Scraper
                 i += 1
             # for
 
-            mkdirp product_color_directory, (error) ->
-                throw error if error
+            mkdirp product_color_directory, (err) ->
+                if err
+                    callback(err, null)
+                    return
+                # if
 
                 # for color in product_data['colors']
                 #     if color['thumb_url']
@@ -515,7 +547,7 @@ class @Scraper
 
                             try
                                 image_request = request(color['url']).pipe(fs.createWriteStream(base_name + filename))
-                                image_request.on 'error', (error) ->
+                                image_request.on 'error', (err) ->
                                     console.log chalk.red("Color download error: #{color['url']}")
 
                                     color['image'] = color['title']
@@ -537,7 +569,7 @@ class @Scraper
 
                             try
                                 image_request = request(color['thumb_url']).pipe(fs.createWriteStream(base_name + filename))
-                                image_request.on 'error', (error) ->
+                                image_request.on 'error', (err) ->
                                     console.log chalk.red("Color thumbnail download error: #{color['thumb_url']}")
                                 # error
 
@@ -549,7 +581,7 @@ class @Scraper
                     # for
                 # for
 
-                callback(product_data)
+                callback(null, product_data)
             # mkdirp
         # mkdirp
     # download_product_images

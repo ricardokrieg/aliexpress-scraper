@@ -6,9 +6,10 @@ chalk = Meteor.npmRequire('chalk')
 
 chalk.enabled = true
 
-Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000784/swimwear.html'
+# Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000784/swimwear.html'
+Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000109/necklaces-pendants.html?shipCountry=US&shipFromCountry=&shipCompanies=&SearchText=&minPrice=&maxPrice=14&minQuantity=&maxQuantity=&isFreeShip=y&isFavorite=n&isRtl=yes&isOnSale=n&isBigSale=n&similar_style=yes&similar_style_id=&isAtmOnline=n&CatId=200000109&g=y&pvId=326-200572191&needQuery=n&isrefine=y'
 Meteor.PRICE_MULTIPLIER = 0.3
-Meteor.PAGE_LIMIT = 1
+Meteor.PAGE_LIMIT = -1
 Meteor.CSV_DELIMITER = ','
 
 do_export = (category_or_url) ->
@@ -24,31 +25,41 @@ do_export = (category_or_url) ->
 
     console.log "Going to export #{product_ids.length} products"
 
-    Exporter.export_products product_ids, category.name, ->
-        console.log "Done"
+    Exporter.export_products product_ids, category.name, (err) ->
+        if err
+            console.log chalk.red("Exporter Error: #{err.message}")
+        else
+            console.log "Done"
+        # if
     # export_products
 # do_export
 
 do_scrape = (category_url) ->
-    Scraper.scrape_category category_url, (category) ->
+    Scraper.scrape_category category_url, (err, category) ->
+        if err
+            console.log chalk.red("Scrape Category Error: #{err.message}")
+            return
+        # if
+
         products = Products.find({category_id: category._id, scraped: false}).fetch()
 
         console.log "Going to scrape #{products.length} products"
 
         async.eachLimit products, 10, Meteor.bindEnvironment((product, async_products_callback) ->
-            try
-                Scraper.scrape_product product, (error, product) ->
-                    console.log "#{product['title']} [Done]" unless error
-
-                    async_products_callback()
-                # scrape_product
-            catch e
-                console.log chalk.red("#{product['aliexpress_id']} [Error][#{e.message}]")
+            Scraper.scrape_product product, (err, product) ->
+                if err
+                    console.log chalk.red("#{product['aliexpress_id']} [#{err.message}]")
+                else
+                    console.log "#{product['title']} [Done]"
+                # if
 
                 async_products_callback()
-            # try
-        ), (error) ->
-            throw error if error
+            # scrape_product
+        ), (err) ->
+            if err
+                console.log chalk.red("Fatal Error: #{e.message}")
+                return
+            # if
 
             console.log "Done"
 
@@ -97,19 +108,20 @@ do_test = ->
     products = Products.find({category_id: category._id, scraped: false}).fetch()
 
     async.eachLimit products, 10, Meteor.bindEnvironment((product, async_products_callback) ->
-        try
-            Scraper.scrape_product product, (error, product) ->
-                console.log "#{product['title']} [Done]" unless error
-
-                async_products_callback()
-            # scrape_product
-        catch e
-            console.log chalk.red("#{product['aliexpress_id']} [Error][#{e.message}]")
+        Scraper.scrape_product product, (err, product) ->
+            if err
+                console.log chalk.red("#{product['title']} [#{err.message}]")
+            else
+                console.log "#{product['title']} [Done]"
+            # if
 
             async_products_callback()
-        # try
-    ), (error) ->
-        throw error if error
+        # scrape_product
+    ), (err) ->
+        if err
+            console.log chalk.red("Fatal Error: #{e.message}")
+            return
+        # if
 
         console.log "Done"
 

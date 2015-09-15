@@ -74,7 +74,7 @@ class @Scraper
 
         # request = Meteor.npmRequire('request').defaults({'proxy': Scraper.proxy()})
 
-        request Scraper.build_options(category_page_url), Meteor.bindEnvironment (err, response, html) ->
+        category_request = request Scraper.build_options(category_page_url), Meteor.bindEnvironment (err, response, html) ->
             if err
                 callback(err, null)
                 return
@@ -117,10 +117,16 @@ class @Scraper
                 # page-next
             # if
         # request
+
+        category_request.on 'error', (err) ->
+            console.log chalk.red("Category Request Error: #{err.message}")
+            # callback(err, null)
+            return
+        # error
     # scrape_category_page
 
     @scrape_product: (product, callback) ->
-        request Scraper.build_options(product['url']), Meteor.bindEnvironment (err, response, html) ->
+        product_request = request Scraper.build_options(product['url']), Meteor.bindEnvironment (err, response, html) ->
             if err
                 callback(err, product)
                 return
@@ -140,7 +146,8 @@ class @Scraper
                 images: [],
                 attributes: [],
                 option_types: [],
-                count_price_modifiers: 0
+                count_price_modifiers: 0,
+                has_sku: true
             }
 
             $('h1.product-name[itemprop=name]').filter ->
@@ -214,36 +221,43 @@ class @Scraper
 
             if sku_matches and sku_matches.length == 2
                 try
-                    for sku in JSON.parse(sku_matches[1])
-                        sku_attr = []
-                        for a in sku['skuAttr'].split(';')
-                            temp = []
-                            for b in a.split(':')
-                                if b.indexOf('#') != -1
-                                    b = b[0..b.indexOf('#')-1]
-                                # if
-                                temp.push(b)
+                    if JSON.parse(sku_matches[1])[0]['skuAttr']
+                        for sku in JSON.parse(sku_matches[1])
+                            sku_attr = []
+                            for a in sku['skuAttr'].split(';')
+                                temp = []
+                                for b in a.split(':')
+                                    if b.indexOf('#') != -1
+                                        b = b[0..b.indexOf('#')-1]
+                                    # if
+                                    temp.push(b)
+                                # for
+                                sku_attr.push(temp.join(':'))
                             # for
-                            sku_attr.push(temp.join(':'))
+                            sku_attr = sku_attr.join(';')
+
+                            sku_properties.push({
+                                attr: sku_attr,
+                                prop_ids: sku['skuPropIds'],
+                                price: sku['skuVal']['skuPrice']
+                            })
                         # for
-                        sku_attr = sku_attr.join(';')
 
-                        sku_properties.push({
-                            attr: sku_attr,
-                            prop_ids: sku['skuPropIds'],
-                            price: sku['skuVal']['skuPrice']
-                        })
-                    # for
-
-                    product_data['sku_properties'] = sku_properties
-                    sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
+                        product_data['sku_properties'] = sku_properties
+                        sku_prop_ids = (attr.split(':')[0] for attr in sku_properties[0]['attr'].split(';'))
+                    else
+                        product_data['has_sku'] = false
+                        sku_properties = []
+                        product_data['sku_properties'] = []
+                    # if
                 catch e
                     callback(new Error("Error in SKU info [#{e.message}]"), product)
                     return
                 # try
             else
-                callback(new Error("No SKU matches"), product)
-                return
+                product_data['has_sku'] = false
+                sku_properties = []
+                product_data['sku_properties'] = []
             # if
 
             # TODO Should check if item is available
@@ -380,7 +394,7 @@ class @Scraper
                 product_data['count_price_modifiers'] += 1 if option_type['price_changed']
             # for
 
-            if product_data['count_price_modifiers'] == 1
+            if product_data['has_sku'] and product_data['count_price_modifiers'] == 1
                 product_data['price'] = product_data['min_price']
 
                 for option_type in product_data['option_types']
@@ -441,7 +455,7 @@ class @Scraper
             if description_url_matches and description_url_matches.length == 2
                 description_url = description_url_matches[1]
 
-                request Scraper.build_options(description_url), Meteor.bindEnvironment (err, response, html) ->
+                description_request = request Scraper.build_options(description_url), Meteor.bindEnvironment (err, response, html) ->
                     if err
                         callback(err, product)
                         return
@@ -478,13 +492,26 @@ class @Scraper
                         product = Products.findOne(query_params)
 
                         callback(null, product)
+                        return
                     # download_product_images
                 # request
+
+                description_request.on 'error', (err) ->
+                    console.log chalk.red("Description Request Error: #{err.message}")
+                    # callback(err, product)
+                    return
+                # error
             else
                 callback(new Error("No Description"), product)
                 return
             # if
         # request
+
+        product_request.on 'error', (err) ->
+            console.log chalk.red("Product Request Error: #{err.message}")
+            # callback(err, product)
+            return
+        # error
     # scrape_product
 
     @download_product_images: (product_data, callback) ->

@@ -10,7 +10,7 @@ chalk.enabled = true
 Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000109/necklaces-pendants.html?shipCountry=US&shipFromCountry=&shipCompanies=&SearchText=&minPrice=&maxPrice=14&minQuantity=&maxQuantity=&isFreeShip=y&isFavorite=n&isRtl=yes&isOnSale=n&isBigSale=n&similar_style=yes&similar_style_id=&isAtmOnline=n&CatId=200000109&g=y&pvId=326-200572191&needQuery=n&isrefine=y'
 Meteor.PRICE_MULTIPLIER = 0.3
 Meteor.PAGE_LIMIT = -1
-Meteor.CSV_DELIMITER = ','
+Meteor.CSV_DELIMITER = ';'
 
 do_export = (category_or_url) ->
     console.log "Exporting"
@@ -133,8 +133,8 @@ if Meteor.isServer
     Meteor.startup ->
         console.log "START"
 
-        do_scrape(Meteor.CATEGORY_URL)
-        # do_export(Meteor.CATEGORY_URL)
+        # do_scrape(Meteor.CATEGORY_URL)
+        do_export(Meteor.CATEGORY_URL)
         # do_test()
     # startup
 # isServer

@@ -1,5 +1,6 @@
 # export MONGO_URL=mongodb://stark:passtrash123@ds063892.mongolab.com:63892/general
 
+fs = Meteor.npmRequire('fs')
 util = Meteor.npmRequire('util')
 async = Meteor.npmRequire('async')
 chalk = Meteor.npmRequire('chalk')
@@ -9,10 +10,10 @@ chalk.enabled = true
 # Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000784/swimwear.html'
 Meteor.CATEGORY_URL = 'http://www.aliexpress.com/category/200000109/necklaces-pendants.html?shipCountry=US&shipFromCountry=&shipCompanies=&SearchText=&minPrice=&maxPrice=14&minQuantity=&maxQuantity=&isFreeShip=y&isFavorite=n&isRtl=yes&isOnSale=n&isBigSale=n&similar_style=yes&similar_style_id=&isAtmOnline=n&CatId=200000109&g=y&pvId=326-200572191&needQuery=n&isrefine=y'
 Meteor.PRICE_MULTIPLIER = 0.3
-Meteor.PAGE_LIMIT = -1
+Meteor.PAGE_LIMIT = 1
 Meteor.CSV_DELIMITER = ','
 
-do_export = (category_or_url) ->
+do_export = (category_or_url, callback) ->
     console.log "Exporting"
 
     category = category_or_url
@@ -29,12 +30,14 @@ do_export = (category_or_url) ->
         if err
             console.log chalk.red("Exporter Error: #{err.message}")
         else
-            console.log "Done"
+            console.log "Done. CSV saved at /tmp/scraper/aliexpress/#{category.name}.csv"
         # if
+
+        callback()
     # export_products
 # do_export
 
-do_scrape = (category_url) ->
+do_scrape = (category_url, callback) ->
     Scraper.scrape_category category_url, (err, category) ->
         if err
             console.log chalk.red("Scrape Category Error: #{err.message}")
@@ -63,12 +66,12 @@ do_scrape = (category_url) ->
 
             console.log "Done"
 
-            do_export(category)
+            do_export(category, callback)
         # each
     # scrape_category
 # do_scrape
 
-do_test = ->
+do_test = (callback) ->
     Categories.remove({})
     Categories.insert({url: 'aliexpress.com', name: 'Testing'})
     category = Categories.findOne()
@@ -125,7 +128,7 @@ do_test = ->
 
         console.log "Done"
 
-        do_export(category)
+        do_export(category, callback)
     # each
 # do_test
 
@@ -133,8 +136,27 @@ if Meteor.isServer
     Meteor.startup ->
         console.log "START"
 
-        # do_scrape(Meteor.CATEGORY_URL)
-        do_export(Meteor.CATEGORY_URL)
-        # do_test()
+        try
+            stats = fs.lstatSync('../../../../../urls.txt')
+
+            if stats.isFile()
+                Meteor.CATEGORY_URL = (url for url in fs.readFileSync('../../../../../urls.txt').toString().split("\n") when url != '')
+                console.log "Scraping #{Meteor.CATEGORY_URL.length} urls:"
+                console.log Meteor.CATEGORY_URL
+            # if
+        catch e
+        # try
+
+        if typeof Meteor.CATEGORY_URL == 'string'
+            Meteor.CATEGORY_URL = [Meteor.CATEGORY_URL]
+            console.log "Scraping single url: #{Meteor.CATEGORY_URL}"
+        # if
+
+        async.eachSeries Meteor.CATEGORY_URL, Meteor.bindEnvironment((category_url, async_category_url_callback) ->
+            console.log "URL: #{category_url}"
+            do_scrape(category_url, async_category_url_callback)
+            # do_export(category_url, async_category_url_callback)
+            # do_test(async_category_url_callback)
+        ) # eachSeries
     # startup
 # isServer

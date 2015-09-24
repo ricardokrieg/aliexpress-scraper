@@ -1,5 +1,6 @@
 bundle install
 
+mkdir local/db
 ./local/mongod --smallfiles --dbpath `pwd`/local/db --oplogSize 8 2>&1 > local/mongo.log &
 export mongo_id=$!
 

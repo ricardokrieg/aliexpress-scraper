@@ -112,6 +112,6 @@ class Exporter
       end
     end
 
-    puts "Exported".green
+    puts "[#{category[:name]}] Exported".green
   end
 end

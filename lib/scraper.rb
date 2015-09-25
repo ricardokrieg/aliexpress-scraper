@@ -53,7 +53,7 @@ class Scraper
     def self.scrape_products(category)
         products = Database.get_products_to_scrape(category[:_id])
         product_ids = products.map {|p| p[:_id]}
-        
+
         total_products = product_ids.size
         puts "[#{category[:name]}] Scraping #{total_products} products".yellow
 

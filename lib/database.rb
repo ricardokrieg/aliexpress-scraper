@@ -54,7 +54,7 @@ class Database
   def self.update_product(product_id, product_data)
     self.products.find(_id: product_id).replace_one(product_data)
 
-    self.products.find({_id: product_id}).limit(1).first
+    self.products.find(_id: product_id).limit(1).first
   end
 
   def self.get_products_to_scrape(category_id)

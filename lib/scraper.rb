@@ -52,11 +52,14 @@ class Scraper
 
     def self.scrape_products(category)
         products = Database.get_products_to_scrape(category[:_id])
-
-        total_products = products.count.to_i
+        product_ids = products.map {|p| p[:_id]}
+        
+        total_products = product_ids.size
         puts "[#{category[:name]}] Scraping #{total_products} products".yellow
 
-        products.each_with_index do |product, i|
+        product_ids.each_with_index do |product_id, i|
+            product = Database.products.find(_id: product_id).limit(1).first
+
             begin
                 remaining = total_products - (i+1)
                 self.scrape_product(product, category, remaining)

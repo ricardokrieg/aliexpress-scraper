@@ -6,6 +6,7 @@ require 'colorize'
 require './lib/scraper.rb'
 require './lib/exporter.rb'
 
+MULTIPLE_PRODUCTS = 20
 PRICE_MULTIPLIER = 0.3
 CSV_DELIMITER = ','
 

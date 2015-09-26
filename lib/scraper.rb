@@ -7,7 +7,7 @@ require 'colorize'
 require './lib/database.rb'
 
 class Scraper
-    def self.scrape_search_url(url)
+    def self.scrape_search_url(url, price_range=nil)
         puts "- #{url}".white
 
         category = Database.get_category(url)
@@ -55,17 +55,27 @@ class Scraper
         product_ids = products.map {|p| p[:_id]}
 
         total_products = product_ids.size
-        puts "[#{category[:name]}] Scraping #{total_products} products".yellow
+        puts "[#{category[:name]}] Scraping #{total_products} products (multiple = #{MULTIPLE_PRODUCTS})".yellow
 
-        product_ids.each_with_index do |product_id, i|
-            product = Database.products.find(_id: product_id).limit(1).first
+        product_ids_threaded = product_ids.each_slice(MULTIPLE_PRODUCTS).to_a
 
-            begin
-                remaining = total_products - (i+1)
-                self.scrape_product(product, category, remaining)
-            rescue StandardError => e
-                puts "[#{category[:name]}] #{product[:aliexpress_id]} (#{e.message})".red
-            end
+        product_ids_threaded.each do |product_ids|
+            puts "[#{category[:name]}] Scraping group of #{product_ids.size} products".white
+
+            start = Time.now
+            product_ids.map do |product_id|
+                Thread.new do
+                    begin
+                        product = Database.products.find(_id: product_id).limit(1).first
+                        total_products -= 1
+                        self.scrape_product(product, category, total_products)
+                    rescue StandardError => e
+                        puts "[#{category[:name]}] #{product[:aliexpress_id]} (#{e.message})".red
+                    end
+                end
+            end.each(&:join)
+
+            puts "[#{category[:name]}] Took #{(Time.now - start).to_i} seconds to scrape #{product_ids.size} products".white
         end
     end
 
@@ -98,7 +108,7 @@ class Scraper
         if min_price_matches && min_price_matches.size == 2
             product_data[:min_price] = min_price_matches[1]
         else
-            raise Error.new("min_price")
+            raise Exception.new("min_price")
         end
 
         max_price_regex = /.*window\.runParams\.maxPrice=\"(.*)\".*/i
@@ -106,7 +116,7 @@ class Scraper
         if max_price_matches and max_price_matches.size == 2
             product_data[:max_price] = max_price_matches[1]
         else
-            raise Error.new("max_price")
+            raise Exception.new("max_price")
         end
 
         product_data[:image_urls] = html.css('ul.image-nav li.image-nav-item span img').map {|img| img.attr('src').gsub(/_50x50\..*/, '')}
@@ -159,7 +169,7 @@ class Scraper
             elsif dl.css('ul').first.attr('class').include?('sku-checkbox')
                 attribute_type = 'checkbox'
             else
-                raise Error.new("Invalid option type")
+                raise Exception.new("Invalid option type")
             end
 
             sku_prop_id = dl.css('ul').first.attr('data-sku-prop-id')
@@ -197,7 +207,7 @@ class Scraper
             sku_prop_ids.delete(option_type[:sku_prop_id])
         end
 
-        raise Error.new("Invalid SKU Count") if sku_prop_ids.size > 1
+        raise Exception.new("Invalid SKU Count") if sku_prop_ids.size > 1
 
         product_data[:option_types].select {|option_type| option_type[:sku_prop_id].nil?}.each do |option_type|
             option_type[:sku_prop_id] = sku_prop_ids.shift
@@ -352,7 +362,7 @@ class Scraper
             description_html.css('img').remove
             product_data[:description] = description_html.to_s
         else
-            raise Error.new("No Description")
+            raise Exception.new("No Description")
         end
 
         base_name = '/tmp/scraper/aliexpress'
@@ -362,21 +372,24 @@ class Scraper
         FileUtils::mkdir_p product_directory
         FileUtils::mkdir_p product_color_directory
 
+        image_threads = []
         i = 1
         product_data[:image_urls].each do |image_url|
             filename = "/images/#{product_data[:aliexpress_id]}/#{i}.jpg"
 
-            begin
-                open(URI.encode(image_url)) do |f|
-                    File.open(base_name + filename, 'wb') do |file|
-                        file.puts f.read
+            # image_threads << Thread.new do
+                begin
+                    open(URI.encode(image_url)) do |f|
+                        File.open(base_name + filename, 'wb') do |file|
+                            file.puts f.read
+                        end
                     end
-                end
 
-                product_data[:images] << 'media/import' + filename
-            rescue StandardError => e
-                puts "Image download error: #{image_url} (#{e.message})".red
-            end
+                    product_data[:images] << 'media/import' + filename
+                rescue StandardError => e
+                    puts "Image download error: #{image_url} (#{e.message})".red
+                end
+            # end
 
             i += 1
         end
@@ -386,20 +399,22 @@ class Scraper
                 if color[:url]
                     filename = "/images/#{product_data[:aliexpress_id]}/colors/#{color[:title].gsub(/\W/, '-')}.jpg"
 
-                    begin
-                        open(URI.encode(color[:url])) do |f|
-                            File.open(base_name + filename, 'wb') do |file|
-                                file.puts f.read
+                    # image_threads << Thread.new do
+                        begin
+                            open(URI.encode(color[:url])) do |f|
+                                File.open(base_name + filename, 'wb') do |file|
+                                    file.puts f.read
+                                end
                             end
-                        end
 
-                        fn = 'media/import' + filename
-                        color[:image] = fn
-                        product_data[:images] << fn
-                    rescue StandardError => e
-                        puts "Color download error: #{color[:url]} (#{e.message})".red
-                        color[:image] = color[:title]
-                    end
+                            fn = 'media/import' + filename
+                            color[:image] = fn
+                            product_data[:images] << fn
+                        rescue StandardError => e
+                            puts "Color download error: #{color[:url]} (#{e.message})".red
+                            color[:image] = color[:title]
+                        end
+                    # end
                 else
                     color[:image] = color[:title]
                 end
@@ -407,20 +422,23 @@ class Scraper
                 if color[:thumb_url]
                     filename = "/images/#{product_data[:aliexpress_id]}/colors/#{color[:title].gsub(/\W/, '-')}_thumb.jpg"
 
-                    begin
-                        open(URI.encode(color[:thumb_url])) do |f|
-                            File.open(base_name + filename, 'wb') do |file|
-                                file.puts f.read
+                    # image_threads << Thread.new do
+                        begin
+                            open(URI.encode(color[:thumb_url])) do |f|
+                                File.open(base_name + filename, 'wb') do |file|
+                                    file.puts f.read
+                                end
                             end
-                        end
 
-                        color[:value] = 'media/import' + filename
-                    rescue StandardError => e
-                        puts "Color thumbnail download error: #{color[:thumb_url]} (#{e.message})".red
-                    end
+                            color[:value] = 'media/import' + filename
+                        rescue StandardError => e
+                            puts "Color thumbnail download error: #{color[:thumb_url]} (#{e.message})".red
+                        end
+                    # end
                 end
             end
         end
+        image_threads.each(&:join)
 
         product = Database.update_product(product[:_id], product_data)
 

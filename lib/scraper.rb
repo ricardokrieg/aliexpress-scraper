@@ -444,4 +444,28 @@ class Scraper
 
         puts "[#{category[:name]}] #{product[:aliexpress_id]}. #{remaining} remaining".green
     end
+
+    def self.get_max_price(url)
+        max_price_url = if url.include?('SortType=')
+            url.gsub(/SortType=(.*)&+/, '') + '&SortType=price_desc'
+        else
+            url + (url.include?('?') ? '&' : '?') + 'SortType=price_desc'
+        end
+
+        html = Nokogiri::HTML(open(max_price_url))
+
+        html.css('#list-items ul li').first.css('.price .value[itemprop=price]').text.gsub(/[^\d\.]/, '').to_f
+    end
+
+    def self.get_min_price(url)
+        min_price_url = if url.include?('SortType=')
+            url.gsub(/SortType=(.*)&+/, '') + '&SortType=price_asc'
+        else
+            url + (url.include?('?') ? '&' : '?') + 'SortType=price_asc'
+        end
+
+        html = Nokogiri::HTML(open(min_price_url))
+
+        html.css('#list-items ul li').first.css('.price .value[itemprop=price]').text.gsub(/[^\d\.]/, '').to_f
+    end
 end

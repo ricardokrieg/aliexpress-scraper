@@ -9,6 +9,10 @@ require './lib/exporter.rb'
 MULTIPLE_PRODUCTS = 20
 PRICE_MULTIPLIER = 0.3
 CSV_DELIMITER = ','
+MIN_PRICE = nil
+MAX_PRICE = nil
+PRICE_INCREMENT = 0.01
+PRICE_AS_BRL = false
 
 begin
     search_urls = begin
@@ -43,8 +47,6 @@ begin
                 puts "Error: #{e.message}".red
             rescue
             end
-        when 'test'
-            Scraper.get_max_price(search_url)
         else
             begin
                 Scraper.scrape_search_url(search_url)

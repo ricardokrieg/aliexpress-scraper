@@ -12,13 +12,41 @@ class Scraper
 
         category = Database.get_category(url)
 
-        puts "[#{category[:name]}] Scanning #{PAGE_LIMIT < 0 ? 'all' : PAGE_LIMIT == 0 ? 'no' : PAGE_LIMIT} pages".white
+        min_price = MIN_PRICE || self.get_min_price(url)
+        max_price = MAX_PRICE || self.get_max_price(url)
+
+        puts "[#{category[:name]}] Scanning #{PAGE_LIMIT < 0 ? 'all' : PAGE_LIMIT == 0 ? 'no' : PAGE_LIMIT} pages. Min Price = #{min_price}, Max Price = #{max_price}, Increment = #{PRICE_INCREMENT}".yellow
 
         if PAGE_LIMIT != 0
-            self.collect_product_ids(url, 1, category)
+            self.collect_product_ids_using_price_range(url, category, min_price, max_price, PRICE_INCREMENT)
+            # self.collect_product_ids(url, 1, category)
         end
 
         self.scrape_products(category)
+    end
+
+    def self.collect_product_ids_using_price_range(url, category, min_price, max_price, price_increment)
+        price_range = (min_price..max_price).step(price_increment).to_a
+        price_range.each_with_index do |price, i|
+            param_min_price = price.round(2).to_s
+            param_max_price = (price_range[i+1] - 0.01).round(2).to_s
+
+            puts "[#{category[:name]}] Price Range = #{param_min_price} - #{param_max_price}".yellow
+
+            url = if url.include?('minPrice=')
+                url.gsub(/minPrice=(.*)&+/, '') + '&minPrice=' + param_min_price
+            else
+                url + (url.include?('?') ? '&' : '?') + 'minPrice=' + param_min_price
+            end
+
+            url = if url.include?('maxPrice=')
+                url.gsub(/maxPrice=(.*)&+/, '') + '&maxPrice=' + param_max_price
+            else
+                url + (url.include?('?') ? '&' : '?') + 'maxPrice=' + param_max_price
+            end
+
+            self.collect_product_ids(url, 1, category)
+        end
     end
 
     def self.collect_product_ids(url, page_number, category)
@@ -454,7 +482,12 @@ class Scraper
 
         html = Nokogiri::HTML(open(max_price_url))
 
-        html.css('#list-items ul li').first.css('.price .value[itemprop=price]').text.gsub(/[^\d\.]/, '').to_f
+        price = html.css('#list-items ul li').first.css('.price .value[itemprop=price]').text
+        if PRICE_AS_BRL
+            price.gsub(/[^\d,]/, '').gsub(/,/, '.').to_f
+        else
+            price.gsub(/[^\d\.]/, '').to_f
+        end
     end
 
     def self.get_min_price(url)
@@ -466,6 +499,11 @@ class Scraper
 
         html = Nokogiri::HTML(open(min_price_url))
 
-        html.css('#list-items ul li').first.css('.price .value[itemprop=price]').text.gsub(/[^\d\.]/, '').to_f
+        price = html.css('#list-items ul li').first.css('.price .value[itemprop=price]').text
+        if PRICE_AS_BRL
+            price.gsub(/[^\d,]/, '').gsub(/,/, '.').to_f
+        else
+            price.gsub(/[^\d\.]/, '').to_f
+        end
     end
 end

@@ -12,7 +12,7 @@ CSV_DELIMITER = ','
 MIN_PRICE = nil
 MAX_PRICE = nil
 PRICE_INCREMENT = 0.01
-PRICE_AS_BRL = true
+PRICE_AS_BRL = false
 
 begin
     search_urls = begin
@@ -53,6 +53,7 @@ begin
                 Exporter.export_search_url(search_url)
             rescue StandardError => e
                 puts "Error: #{e.message}".red
+                puts e.backtrace
             end
         end
     end

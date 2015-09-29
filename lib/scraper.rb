@@ -73,9 +73,11 @@ class Scraper
         inserted_products_count = Database.insert_products(products, category)
         puts "[#{category[:name]}] Added #{inserted_products_count.to_i} products".yellow
 
-        unless html.css('span.page-end.ui-pagination-next.ui-pagination-disabled').any? or (PAGE_LIMIT > -1 && page_number >= PAGE_LIMIT)
-            next_page_url = html.css('a.page-next.ui-pagination-next').attr('href').value
-            self.collect_product_ids(next_page_url, page_number+1, category)
+        if products.any?
+            unless html.css('span.page-end.ui-pagination-next.ui-pagination-disabled').any? or (PAGE_LIMIT > -1 && page_number >= PAGE_LIMIT)
+                next_page_url = html.css('a.page-next.ui-pagination-next').attr('href').value
+                self.collect_product_ids(next_page_url, page_number+1, category)
+            end
         end
     end
 

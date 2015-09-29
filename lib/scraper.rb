@@ -8,6 +8,8 @@ require './lib/database.rb'
 
 class Scraper
     def self.scrape_search_url(url, price_range=nil)
+        url = self.set_params(url)
+
         puts "- #{url}".white
 
         category = Database.get_category(url)
@@ -19,7 +21,6 @@ class Scraper
 
         if PAGE_LIMIT != 0
             self.collect_product_ids_using_price_range(url, category, min_price, max_price, PRICE_INCREMENT)
-            # self.collect_product_ids(url, 1, category)
         end
 
         self.scrape_products(category)
@@ -34,13 +35,13 @@ class Scraper
             puts "[#{category[:name]}] Price Range = #{param_min_price} - #{param_max_price}".yellow
 
             url = if url.include?('minPrice=')
-                url.gsub(/minPrice=(.*)&+/, '') + '&minPrice=' + param_min_price
+                url.gsub(/minPrice=(.*?)&+/, '') + '&minPrice=' + param_min_price
             else
                 url + (url.include?('?') ? '&' : '?') + 'minPrice=' + param_min_price
             end
 
             url = if url.include?('maxPrice=')
-                url.gsub(/maxPrice=(.*)&+/, '') + '&maxPrice=' + param_max_price
+                url.gsub(/maxPrice=(.*?)&+/, '') + '&maxPrice=' + param_max_price
             else
                 url + (url.include?('?') ? '&' : '?') + 'maxPrice=' + param_max_price
             end
@@ -505,5 +506,30 @@ class Scraper
         else
             price.gsub(/[^\d\.]/, '').to_f
         end
+    end
+
+    def self.set_params(url)
+        params = {
+            'shipCountry': 'US', # Ship to USA
+            'isFreeShip': 'y', # Free Shipping
+            'isFavorite': 'n',
+            'isRtl': 'yes', # 1 Piece Only
+            'isOnSale': 'n',
+            'isBigSale': 'n',
+            'similar_style': 'n',
+            'isAtmOnline': 'n',
+            'g': 'y',
+            'needQuery': 'n',
+        }
+
+        params.each do |k, v|
+            url = if url.include?("#{k}=")
+                url.gsub(%r(#{k}=(.*)&+), '') + "&#{k}=#{v}"
+            else
+                url + (url.include?('?') ? '&' : '?') + "#{k}=#{v}"
+            end
+        end
+
+        return url
     end
 end

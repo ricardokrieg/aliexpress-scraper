@@ -12,7 +12,7 @@ CSV_DELIMITER = ','
 MIN_PRICE = nil
 MAX_PRICE = nil
 PRICE_INCREMENT = 0.01
-PRICE_AS_BRL = false
+PRICE_AS_BRL = true
 
 begin
     search_urls = begin

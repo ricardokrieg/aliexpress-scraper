@@ -510,16 +510,16 @@ class Scraper
 
     def self.set_params(url)
         params = {
-            'shipCountry': 'US', # Ship to USA
-            'isFreeShip': 'y', # Free Shipping
-            'isFavorite': 'n',
-            'isRtl': 'yes', # 1 Piece Only
-            'isOnSale': 'n',
-            'isBigSale': 'n',
-            'similar_style': 'n',
-            'isAtmOnline': 'n',
-            'g': 'y',
-            'needQuery': 'n',
+            'shipCountry' => 'US', # Ship to USA
+            'isFreeShip' => 'y', # Free Shipping
+            'isFavorite' => 'n',
+            'isRtl' => 'yes', # 1 Piece Only
+            'isOnSale' => 'n',
+            'isBigSale' => 'n',
+            'similar_style' => 'n',
+            'isAtmOnline' => 'n',
+            'g' => 'y',
+            'needQuery' => 'n',
         }
 
         params.each do |k, v|

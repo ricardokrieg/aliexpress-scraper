@@ -101,7 +101,7 @@ class Scraper
                         total_products -= 1
                         self.scrape_product(product, category, total_products)
                     rescue StandardError => e
-                        puts "[#{category[:name]}] #{product[:aliexpress_id]} (#{e.message})".red
+                        puts "[#{category[:name]}] #{product.nil? ? 'NULL' : product[:aliexpress_id]} (#{e.message})".red
                     end
                 end
             end.each(&:join)

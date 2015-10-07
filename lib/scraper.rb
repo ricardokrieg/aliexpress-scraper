@@ -139,7 +139,7 @@ class Scraper
         if min_price_matches && min_price_matches.size == 2
             product_data[:min_price] = min_price_matches[1]
         else
-            raise Exception.new("min_price")
+            raise StandardError.new("min_price")
         end
 
         max_price_regex = /.*window\.runParams\.maxPrice=\"(.*)\".*/i
@@ -147,7 +147,7 @@ class Scraper
         if max_price_matches and max_price_matches.size == 2
             product_data[:max_price] = max_price_matches[1]
         else
-            raise Exception.new("max_price")
+            raise StandardError.new("max_price")
         end
 
         product_data[:image_urls] = html.css('ul.image-nav li.image-nav-item span img').map {|img| img.attr('src').gsub(/_50x50\..*/, '')}
@@ -200,7 +200,7 @@ class Scraper
             elsif dl.css('ul').first.attr('class').include?('sku-checkbox')
                 attribute_type = 'checkbox'
             else
-                raise Exception.new("Invalid option type")
+                raise StandardError.new("Invalid option type")
             end
 
             sku_prop_id = dl.css('ul').first.attr('data-sku-prop-id')
@@ -238,7 +238,7 @@ class Scraper
             sku_prop_ids.delete(option_type[:sku_prop_id])
         end
 
-        raise Exception.new("Invalid SKU Count") if sku_prop_ids.size > 1
+        raise StandardError.new("Invalid SKU Count") if sku_prop_ids.size > 1
 
         product_data[:option_types].select {|option_type| option_type[:sku_prop_id].nil?}.each do |option_type|
             option_type[:sku_prop_id] = sku_prop_ids.shift
@@ -393,7 +393,7 @@ class Scraper
             description_html.css('img').remove
             product_data[:description] = description_html.to_s
         else
-            raise Exception.new("No Description")
+            raise StandardError.new("No Description")
         end
 
         base_name = '/tmp/scraper/aliexpress'

@@ -6,11 +6,11 @@ require 'colorize'
 require './lib/scraper.rb'
 require './lib/exporter.rb'
 
-MULTIPLE_PRODUCTS = 20
-PRICE_MULTIPLIER = 0.3
+MULTIPLE_PRODUCTS = 30
+PRICE_MULTIPLIER = 0.5
 CSV_DELIMITER = ','
-MIN_PRICE = nil
-MAX_PRICE = 300
+MIN_PRICE = 7
+MAX_PRICE = 7.01
 PRICE_INCREMENT = 0.01
 PRICE_AS_BRL = false
 

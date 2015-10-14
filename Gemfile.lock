@@ -18,6 +18,3 @@ DEPENDENCIES
   json
   mongo
   nokogiri
-
-BUNDLED WITH
-   1.10.6

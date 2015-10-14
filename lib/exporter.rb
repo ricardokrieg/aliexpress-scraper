@@ -3,20 +3,14 @@ require 'fileutils'
 require 'colorize'
 
 require './lib/database.rb'
+require './scraper.rb'
 
 class Exporter
   def self.export_search_url(url)
+    url = Scraper.set_params(url)
+
     category = Database.get_category(url)
     products = Database.get_products_to_export(category[:_id])
-    # products = Database.get_products_to_export_without_category
-
-    Database.categories.find.each do |category|
-      puts "Category"
-      puts category[:_id]
-      puts category[:name]
-      puts category[:url]
-      puts "-" * 10
-    end
 
     filename = "/tmp/scraper/aliexpress/#{category[:name]}.csv"
 

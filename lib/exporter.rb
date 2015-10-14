@@ -9,6 +9,8 @@ class Exporter
     category = Database.get_category(url)
     products = Database.get_products_to_export(category[:_id])
 
+    puts "Test  I: #{Database.products.find(category_id: category[:_id]).count}"
+    puts "Test II: #{Database.products.find.count}"
     puts "Scraped: #{Database.products.find(category_id: category[:_id], scraped: true).count}"
     puts "Not Scraped: #{Database.products.find(category_id: category[:_id], scraped: false).count}"
 

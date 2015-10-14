@@ -11,7 +11,7 @@ class Exporter
 
     puts "Test   I: #{Database.products.find(category_id: category[:_id]).count}"
     puts "Test  II: #{Database.products.find.count}"
-    puts "Test III: #{Database.products.find.last[:category_id]}"
+    puts "Test III: #{Database.products.find.limit(1).first[:category_id]}"
     puts "Test  IV: #{category[:_id]}"
     puts "Scraped: #{Database.products.find(category_id: category[:_id], scraped: true).count}"
     puts "Not Scraped: #{Database.products.find(category_id: category[:_id], scraped: false).count}"

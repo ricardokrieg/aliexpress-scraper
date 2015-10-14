@@ -9,6 +9,9 @@ class Exporter
     category = Database.get_category(url)
     products = Database.get_products_to_export(category[:_id])
 
+    puts "Scraped: #{Database.products.find(category_id: category[:_id], scraped: true).count}"
+    puts "Not Scraped: #{Database.products.find(category_id: category[:_id], scraped: false).count}"
+
     filename = "/tmp/scraper/aliexpress/#{category[:name]}.csv"
 
     puts "[#{category[:name]}] Exporting #{products.count.to_i} products to #{filename}".yellow

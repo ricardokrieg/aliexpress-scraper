@@ -3,7 +3,7 @@ require 'fileutils'
 require 'colorize'
 
 require './lib/database.rb'
-require './scraper.rb'
+require './lib/scraper.rb'
 
 class Exporter
   def self.export_search_url(url)

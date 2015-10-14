@@ -51,6 +51,8 @@ class Scraper
     end
 
     def self.collect_product_ids(url, page_number, category)
+        return if url.nil? || url == ''
+
         puts "[#{category[:name]}] page ##{page_number} (#{url})".white
 
         html = Nokogiri::HTML(open(url))

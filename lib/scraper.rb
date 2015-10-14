@@ -29,6 +29,8 @@ class Scraper
     def self.collect_product_ids_using_price_range(url, category, min_price, max_price, price_increment)
         price_range = (min_price..max_price).step(price_increment).to_a
         price_range.each_with_index do |price, i|
+            break if i == (price_range.size - 1)
+
             param_min_price = price.round(2).to_s
             param_max_price = (price_range[i+1] - 0.01).round(2).to_s
 

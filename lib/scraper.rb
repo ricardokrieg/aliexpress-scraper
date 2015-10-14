@@ -414,6 +414,7 @@ class Scraper
 
             # image_threads << Thread.new do
             success = false
+            error = nil
             5.times do
                 begin
                     open(URI.encode(image_url)) do |f|
@@ -425,12 +426,13 @@ class Scraper
                     product_data[:images] << 'media/import' + filename
                     success = true
                 rescue StandardError => e
+                    error = e
                     sleep 0.1
                 end
 
                 break if success
             end
-            puts "Image download error: #{image_url} (#{e.message})".red unless success
+            puts "Image download error: #{image_url} (#{error.message})".red unless success
             # end
 
             i += 1
@@ -443,6 +445,7 @@ class Scraper
 
                     # image_threads << Thread.new do
                     success = false
+                    error = nil
                     5.times do
                         begin
                             open(URI.encode(color[:url])) do |f|
@@ -457,6 +460,7 @@ class Scraper
 
                             success = true
                         rescue StandardError => e
+                            error = e
                             sleep 0.1
                         end
 
@@ -464,7 +468,7 @@ class Scraper
                     end
 
                     unless success
-                        puts "Color download error: #{color[:url]} (#{e.message})".red
+                        puts "Color download error: #{color[:url]} (#{error.message})".red
                         color[:image] = color[:title]
                     end
                     # end
@@ -477,6 +481,7 @@ class Scraper
 
                     # image_threads << Thread.new do
                     success = false
+                    error = nil
                     5.times do
                         begin
                             open(URI.encode(color[:thumb_url])) do |f|
@@ -489,12 +494,13 @@ class Scraper
 
                             success = true
                         rescue StandardError => e
+                            error = e
                             sleep 0.1
                         end
 
                         break if success
                     end
-                    puts "Color thumbnail download error: #{color[:thumb_url]} (#{e.message})".red unless success
+                    puts "Color thumbnail download error: #{color[:thumb_url]} (#{error.message})".red unless success
                     # end
                 end
             end

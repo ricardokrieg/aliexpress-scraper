@@ -8,13 +8,15 @@ class Exporter
   def self.export_search_url(url)
     category = Database.get_category(url)
     products = Database.get_products_to_export(category[:_id])
+    # products = Database.get_products_to_export_without_category
 
-    puts "Test   I: #{Database.products.find(category_id: category[:_id]).count}"
-    puts "Test  II: #{Database.products.find.count}"
-    puts "Test III: #{Database.products.find.limit(1).first[:category_id]}"
-    puts "Test  IV: #{category[:_id]}"
-    puts "Scraped: #{Database.products.find(category_id: category[:_id], scraped: true).count}"
-    puts "Not Scraped: #{Database.products.find(category_id: category[:_id], scraped: false).count}"
+    Database.categories.find.each do |category|
+      puts "Category"
+      puts category[:_id]
+      puts category[:name]
+      puts category[:url]
+      puts "-" * 10
+    end
 
     filename = "/tmp/scraper/aliexpress/#{category[:name]}.csv"
 

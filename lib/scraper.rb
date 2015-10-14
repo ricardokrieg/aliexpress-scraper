@@ -413,6 +413,8 @@ class Scraper
             filename = "/images/#{product_data[:aliexpress_id]}/#{i}.jpg"
 
             # image_threads << Thread.new do
+            success = false
+            5.times do
                 begin
                     open(URI.encode(image_url)) do |f|
                         File.open(base_name + filename, 'wb') do |file|
@@ -421,9 +423,14 @@ class Scraper
                     end
 
                     product_data[:images] << 'media/import' + filename
+                    success = true
                 rescue StandardError => e
-                    puts "Image download error: #{image_url} (#{e.message})".red
+                    sleep 0.1
                 end
+
+                break if success
+            end
+            puts "Image download error: #{image_url} (#{e.message})".red unless success
             # end
 
             i += 1
@@ -435,6 +442,8 @@ class Scraper
                     filename = "/images/#{product_data[:aliexpress_id]}/colors/#{color[:title].gsub(/\W/, '-')}.jpg"
 
                     # image_threads << Thread.new do
+                    success = false
+                    5.times do
                         begin
                             open(URI.encode(color[:url])) do |f|
                                 File.open(base_name + filename, 'wb') do |file|
@@ -445,10 +454,19 @@ class Scraper
                             fn = 'media/import' + filename
                             color[:image] = fn
                             product_data[:images] << fn
+
+                            success = true
                         rescue StandardError => e
-                            puts "Color download error: #{color[:url]} (#{e.message})".red
-                            color[:image] = color[:title]
+                            sleep 0.1
                         end
+
+                        break if success
+                    end
+
+                    unless success
+                        puts "Color download error: #{color[:url]} (#{e.message})".red
+                        color[:image] = color[:title]
+                    end
                     # end
                 else
                     color[:image] = color[:title]
@@ -458,6 +476,8 @@ class Scraper
                     filename = "/images/#{product_data[:aliexpress_id]}/colors/#{color[:title].gsub(/\W/, '-')}_thumb.jpg"
 
                     # image_threads << Thread.new do
+                    success = false
+                    5.times do
                         begin
                             open(URI.encode(color[:thumb_url])) do |f|
                                 File.open(base_name + filename, 'wb') do |file|
@@ -466,9 +486,15 @@ class Scraper
                             end
 
                             color[:value] = 'media/import' + filename
+
+                            success = true
                         rescue StandardError => e
-                            puts "Color thumbnail download error: #{color[:thumb_url]} (#{e.message})".red
+                            sleep 0.1
                         end
+
+                        break if success
+                    end
+                    puts "Color thumbnail download error: #{color[:thumb_url]} (#{e.message})".red unless success
                     # end
                 end
             end

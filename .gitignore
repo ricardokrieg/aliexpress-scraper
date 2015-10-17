@@ -3,3 +3,7 @@
 local/db/*
 *.csv
 local/mongo.log
+urls.txt
+local/db.zip
+local/__MACOSX
+__MACOSX
